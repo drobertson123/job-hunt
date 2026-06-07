@@ -17,7 +17,17 @@ from fastapi.staticfiles import StaticFiles
 from app import __version__
 from app.config import get_config
 from app.db import init_db
-from app.routers import chat, health, notes, runs, settings
+from app.routers import (
+    actions,
+    artifacts,
+    attention,
+    chat,
+    health,
+    notes,
+    opportunities,
+    runs,
+    settings,
+)
 
 
 @asynccontextmanager
@@ -33,6 +43,11 @@ app.include_router(settings.router)
 app.include_router(chat.router)
 app.include_router(notes.router)
 app.include_router(runs.router)
+app.include_router(opportunities.router)
+app.include_router(opportunities.board_router)
+app.include_router(actions.router)
+app.include_router(artifacts.router)
+app.include_router(attention.router)
 
 # Serve the built frontend (static export) at / when it exists. Mounted last so
 # /api/* routes take precedence. html=True serves index.html for the SPA root.

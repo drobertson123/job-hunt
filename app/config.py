@@ -53,6 +53,10 @@ class AppConfig(BaseSettings):
     agent_max_turns: int = 24
     agent_timeout_seconds: int = 300
 
+    # --- "What needs attention" thresholds ---
+    attention_stale_active_days: int = 7  # active/in-dialogue with no activity
+    attention_untriaged_days: int = 14  # new/qualifying left sitting
+
     @property
     def db_path(self) -> Path:
         return self.data_dir / "app.db"

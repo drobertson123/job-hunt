@@ -34,8 +34,8 @@ from claude_agent_sdk import query as sdk_query
 from sqlmodel import Session
 
 from app.agent.tools import (
+    ALL_TOOL_NAMES,
     MCP_SERVER_NAME,
-    SAVE_NOTE_TOOL,
     build_app_mcp_server,
     current_run_id,
 )
@@ -43,8 +43,10 @@ from app.config import get_config
 from app.db import engine
 from app.models import Event, EventType, Run, RunStatus
 
-# The only tools the agent may use in Phase 0.
-ALLOWED_TOOLS = [SAVE_NOTE_TOOL]
+# The agent may only call our in-process write-back tools. The gate below denies
+# everything else (ToolSearch, a benign discovery meta-tool, is exempt by the SDK
+# and is what lets the agent find these mcp__app__* tools).
+ALLOWED_TOOLS = list(ALL_TOOL_NAMES)
 
 
 def _utcnow() -> datetime:
