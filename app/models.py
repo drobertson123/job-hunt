@@ -10,7 +10,9 @@ Deliberately minimal — just what the vertical slice needs:
                and the first thing the canvas renders.
 
 Later phases add: opportunities, actions, artifacts, decisions, contacts,
-corpus_documents, corpus_chunks, saved_queries.
+saved_queries.
+
+Phase 2 adds: corpus_documents, corpus_chunks, profile.
 """
 
 from __future__ import annotations
@@ -259,3 +261,60 @@ class Contact(SQLModel, table=True):
     link: str | None = None
     notes: str = ""
     created_at: datetime = Field(default_factory=_utcnow)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2: Corpus / RAG substrate + Profile synthesis.
+# --------------------------------------------------------------------------- #
+
+
+class DocumentSource(str, Enum):
+    upload = "upload"
+    paste = "paste"
+
+
+class DocumentMediaType(str, Enum):
+    pdf = "pdf"
+    docx = "docx"
+    txt = "txt"
+    md = "md"
+
+
+class Document(SQLModel, table=True):
+    __tablename__ = "corpus_documents"
+
+    id: int | None = Field(default=None, primary_key=True)
+    title: str
+    source_kind: DocumentSource = DocumentSource.upload
+    media_type: DocumentMediaType = DocumentMediaType.txt
+    raw_text: str = ""
+    content_hash: str = Field(index=True)  # sha256 of raw_text → dedup/idempotency
+    char_count: int = 0
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+class Chunk(SQLModel, table=True):
+    __tablename__ = "corpus_chunks"
+
+    id: int | None = Field(default=None, primary_key=True)
+    document_id: int = Field(foreign_key="corpus_documents.id", index=True)
+    seq: int = 0
+    text: str = ""
+    embedding: bytes = b""  # numpy float32 .tobytes()
+    embedding_model: str = ""
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+class Profile(SQLModel, table=True):
+    __tablename__ = "profile"
+
+    id: int | None = Field(default=None, primary_key=True)
+    headline: str | None = None
+    summary: str | None = None
+    skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    experience: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    achievements: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    target_titles: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    locations: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    source_doc_count: int = 0
+    synthesized_at: datetime = Field(default_factory=_utcnow)
