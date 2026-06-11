@@ -44,6 +44,8 @@ class AppConfig(BaseSettings):
     default_agent_model: str = "claude-sonnet-4-6"
     # Reserve Opus for deep analysis.
     deep_analysis_model: str = "claude-opus-4-8"
+    # Embeddings (RAG corpus). OpenAI; key via settings_service.resolve_openai_key.
+    embedding_model: str = "text-embedding-3-small"
 
     # --- Bootstrap API keys (UI-entered keys in the settings table win) ---
     anthropic_api_key: str | None = None
