@@ -46,3 +46,46 @@ def test_schema_defaults():
     assert isinstance(job.details, JobDetails)
     assert job.details.skills == []
     assert NormalizerResult().opportunities == []
+
+
+class _FakeMessages:
+    """Stand-in for client.messages with a parse() that returns a canned result."""
+
+    def __init__(self, result: NormalizerResult):
+        self._result = result
+        self.calls: list[dict] = []
+
+    def parse(self, **kwargs):
+        self.calls.append(kwargs)
+        return SimpleNamespace(parsed_output=self._result)
+
+
+class _FakeClient:
+    def __init__(self, result: NormalizerResult):
+        self.messages = _FakeMessages(result)
+
+
+def test_normalize_artifact_returns_parsed_output_and_passes_schema():
+    result = NormalizerResult(
+        opportunities=[NormalizedJob(title="Staff ML Engineer", organization="Acme AI")]
+    )
+    client = _FakeClient(result)
+
+    out = normalize_artifact("some free-form markdown", client=client, model="test-model")
+
+    assert out is result
+    call = client.messages.calls[0]
+    assert call["model"] == "test-model"
+    assert call["output_format"] is NormalizerResult
+    assert "some free-form markdown" in call["messages"][0]["content"]
+
+
+def test_normalize_artifact_defaults_model_from_config():
+    result = NormalizerResult()
+    client = _FakeClient(result)
+
+    normalize_artifact("md", client=client)
+
+    from app.config import get_config
+
+    assert client.messages.calls[0]["model"] == get_config().default_agent_model

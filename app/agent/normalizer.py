@@ -69,10 +69,57 @@ def dedupe_key_for(job: NormalizedJob) -> str:
     return _slug(" ".join(parts)) if parts else _slug(job.title)
 
 
-# Placeholders — replaced with real implementations in Tasks 3 and 4.
-def normalize_artifact(*args: Any, **kwargs: Any) -> "NormalizerResult":  # noqa: D401
-    raise NotImplementedError("implemented in Task 3")
+_SYSTEM_INSTRUCTION = (
+    "You convert a free-form career research artifact into structured job "
+    "opportunities. Extract every distinct role described. For each, capture the "
+    "role title, hiring organization, location, a one-paragraph summary, and any "
+    "job details present (salary, seniority, employment type, key skills). If a "
+    "field is absent in the artifact, omit it — never invent values."
+)
 
 
+def _build_prompt(markdown: str) -> str:
+    return (
+        f"{_SYSTEM_INSTRUCTION}\n\n"
+        "Here is the artifact between the markers:\n"
+        "<artifact>\n"
+        f"{markdown}\n"
+        "</artifact>"
+    )
+
+
+def _default_client() -> Any:
+    import anthropic
+
+    return anthropic.Anthropic()
+
+
+def normalize_artifact(
+    markdown: str,
+    *,
+    client: Any | None = None,
+    model: str | None = None,
+    max_tokens: int = 2048,
+) -> NormalizerResult:
+    """Run one free-form artifact through messages.parse into a NormalizerResult.
+
+    `client` is injectable (tests pass a fake exposing `.messages.parse`). `model`
+    defaults to the configured agent model; the normalizer holds no DB dependency.
+    """
+    if client is None:
+        client = _default_client()
+    if model is None:
+        model = get_config().default_agent_model
+
+    response = client.messages.parse(
+        model=model,
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": _build_prompt(markdown)}],
+        output_format=NormalizerResult,
+    )
+    return response.parsed_output
+
+
+# Placeholder — replaced with real implementation in Task 4.
 def persist_normalized(*args: Any, **kwargs: Any) -> "list[Opportunity]":
     raise NotImplementedError("implemented in Task 4")
