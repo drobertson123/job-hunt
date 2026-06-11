@@ -2,7 +2,29 @@
 
 **Date:** 2026-06-10
 **Phase:** 1 (job track only)
-**Status:** Approved (pending spec review)
+**Status:** Implemented; live gate PASSED 2026-06-11.
+
+## Revision 2026-06-11 — extraction mechanism: CLI session, not the Anthropic API
+
+The original design extracted via the Anthropic API's `messages.parse` structured-output
+feature (Approach A's "injectable client"). On review we separated two risks the probe bundles:
+
+- **R1 — extraction:** can an LLM turn messy free-form markdown into correct job-row *values*?
+- **R2 — mechanism:** does `messages.parse` / `output_format` hand back a schema-validated
+  object without bespoke parse-and-retry glue?
+
+**Decision (user):** build the production reused-skill normalizer on the **local Claude Agent
+SDK session** (the same `claude` CLI auth Phase 0 uses) rather than the API — so the app needs
+no `ANTHROPIC_API_KEY` for this path. Consequence, taken deliberately: there is **no
+structured-output guarantee** (R2 is *not* what we ship), so `normalize_artifact` prompts for a
+JSON object matching `NormalizerResult`'s schema and **validates it ourselves with Pydantic**.
+This is the inverse of the original "Approach B rejected" note below — the nondeterminism that
+note warned about is accepted, and the probe was rebuilt to test *this* (CLI + JSON) path.
+
+`normalize_artifact` is now `async`, injects `query_fn` (mirroring `runner.stream_run`), and
+runs a single-turn, tool-less `ClaudeAgentOptions(max_turns=1)` query. The `anthropic`
+dependency was removed. The live gate now runs against the local CLI, gated on
+`OH_RUN_LIVE_PROBE=1` (no API key), and **passed 2026-06-11**.
 
 ## Purpose
 

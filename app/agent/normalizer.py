@@ -2,19 +2,27 @@
 
 Reused MIT skills (e.g. the career-helper) emit free-form markdown, NOT calls to
 our in-process MCP write-back tools. This module converts that free-form output
-into structured `Opportunity` rows via a single Anthropic `messages.parse` call,
-then persists them through the same service layer the authored-skill seam uses.
+into structured `Opportunity` rows, then persists them through the same service
+layer the authored-skill seam uses.
 
-The module is DB-decoupled: `normalize_artifact` takes an injectable client and a
-model name (defaulting to the configured agent model) so it is trivially testable
-and carries no database dependency. `persist_normalized` is the only DB-aware part.
+Auth/mechanism (decided 2026-06-11): extraction runs through the local Claude
+Agent SDK session — the same `claude` CLI auth Phase 0 uses — NOT the Anthropic
+API. There is therefore no `messages.parse` structured-output guarantee: we
+prompt for a JSON object matching `NormalizerResult`'s schema, then parse and
+validate it ourselves with Pydantic. `query_fn` is injectable (mirroring
+`runner.stream_run`) so deterministic tests run with no CLI / network / key.
+`persist_normalized` is the only DB-aware part.
 """
 
 from __future__ import annotations
 
+import json
 import re
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
+from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, TextBlock
+from claude_agent_sdk import query as sdk_query
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -79,8 +87,12 @@ _SYSTEM_INSTRUCTION = (
 
 
 def _build_prompt(markdown: str) -> str:
+    schema = json.dumps(NormalizerResult.model_json_schema())
     return (
         f"{_SYSTEM_INSTRUCTION}\n\n"
+        "Respond with ONE JSON object and nothing else — no prose, no code "
+        "fences, no explanation. It must conform to this JSON Schema:\n"
+        f"{schema}\n\n"
         "Here is the artifact between the markers:\n"
         "<artifact>\n"
         f"{markdown}\n"
@@ -88,36 +100,47 @@ def _build_prompt(markdown: str) -> str:
     )
 
 
-def _default_client() -> Any:
-    import anthropic
+def _extract_json(text: str) -> str:
+    """Pull the JSON object out of a free-form model reply.
 
-    return anthropic.Anthropic()
+    The CLI may wrap the object in ```json fences or surround it with prose, so we
+    strip fences first, then fall back to slicing between the outermost braces.
+    """
+    s = text.strip()
+    fence = re.search(r"```(?:json)?\s*(.*?)```", s, re.DOTALL)
+    if fence:
+        s = fence.group(1).strip()
+    start, end = s.find("{"), s.rfind("}")
+    if start != -1 and end > start:
+        return s[start : end + 1]
+    return s
 
 
-def normalize_artifact(
+async def normalize_artifact(
     markdown: str,
     *,
-    client: Any | None = None,
+    query_fn: Callable[..., AsyncIterator[Any]] = sdk_query,
     model: str | None = None,
-    max_tokens: int = 2048,
 ) -> NormalizerResult:
-    """Run one free-form artifact through messages.parse into a NormalizerResult.
+    """Run one free-form artifact through a local CLI session into a NormalizerResult.
 
-    `client` is injectable (tests pass a fake exposing `.messages.parse`). `model`
-    defaults to the configured agent model; the normalizer holds no DB dependency.
+    Drives a single-turn `claude` Agent SDK query (no tools, CLI auth — no API
+    key), concatenates the assistant's text, then parses + validates the JSON
+    ourselves. `query_fn` is injectable; `model` defaults to the configured agent
+    model. Holds no DB dependency.
     """
-    if client is None:
-        client = _default_client()
     if model is None:
         model = get_config().default_agent_model
 
-    response = client.messages.parse(
-        model=model,
-        max_tokens=max_tokens,
-        messages=[{"role": "user", "content": _build_prompt(markdown)}],
-        output_format=NormalizerResult,
-    )
-    return response.parsed_output
+    options = ClaudeAgentOptions(model=model, max_turns=1)
+    chunks: list[str] = []
+    async for message in query_fn(prompt=_build_prompt(markdown), options=options):
+        if isinstance(message, AssistantMessage):
+            for block in message.content:
+                if isinstance(block, TextBlock) and block.text:
+                    chunks.append(block.text)
+
+    return NormalizerResult.model_validate_json(_extract_json("".join(chunks)))
 
 
 def persist_normalized(

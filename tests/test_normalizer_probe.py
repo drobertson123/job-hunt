@@ -1,17 +1,21 @@
 """Normalizer probe — reused-skill free-form artifact -> structured job rows.
 
 Two layers:
-  * deterministic plumbing tests (stubbed client) — no API key needed;
-  * a live probe (real messages.parse) that auto-skips without ANTHROPIC_API_KEY.
+  * deterministic plumbing tests (fake query_fn) — no CLI / network / key needed;
+  * a live probe (real local `claude` CLI session) gated on OH_RUN_LIVE_PROBE.
+
+Extraction runs through the Claude Agent SDK (CLI auth), not the Anthropic API,
+so the normalizer prompts for JSON and validates it with Pydantic itself.
 """
 
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
+from claude_agent_sdk import AssistantMessage, TextBlock
 from sqlmodel import Session, select
 
 from app.agent.normalizer import (
@@ -48,47 +52,46 @@ def test_schema_defaults():
     assert NormalizerResult().opportunities == []
 
 
-class _FakeMessages:
-    """Stand-in for client.messages with a parse() that returns a canned result."""
+def _fake_query(reply_text: str, calls: list[dict]):
+    """Fake Agent SDK query_fn: records (prompt, options) and replies with text."""
 
-    def __init__(self, result: NormalizerResult):
-        self._result = result
-        self.calls: list[dict] = []
+    async def fake(*, prompt, options) -> AsyncIterator:
+        calls.append({"prompt": prompt, "options": options})
+        yield AssistantMessage(content=[TextBlock(text=reply_text)], model="fake-model")
 
-    def parse(self, **kwargs):
-        self.calls.append(kwargs)
-        return SimpleNamespace(parsed_output=self._result)
+    return fake
 
 
-class _FakeClient:
-    def __init__(self, result: NormalizerResult):
-        self.messages = _FakeMessages(result)
-
-
-def test_normalize_artifact_returns_parsed_output_and_passes_schema():
-    result = NormalizerResult(
-        opportunities=[NormalizedJob(title="Staff ML Engineer", organization="Acme AI")]
+async def test_normalize_artifact_parses_json_reply_and_passes_prompt():
+    reply = (
+        "Here you go:\n```json\n"
+        '{"opportunities": [{"title": "Staff ML Engineer", "organization": "Acme AI"}]}'
+        "\n```"
     )
-    client = _FakeClient(result)
+    calls: list[dict] = []
 
-    out = normalize_artifact("some free-form markdown", client=client, model="test-model")
+    out = await normalize_artifact(
+        "some free-form markdown", query_fn=_fake_query(reply, calls), model="test-model"
+    )
 
-    assert out is result
-    call = client.messages.calls[0]
-    assert call["model"] == "test-model"
-    assert call["output_format"] is NormalizerResult
-    assert "some free-form markdown" in call["messages"][0]["content"]
+    assert isinstance(out, NormalizerResult)
+    assert len(out.opportunities) == 1
+    assert out.opportunities[0].title == "Staff ML Engineer"
+    assert out.opportunities[0].organization == "Acme AI"
+    assert calls[0]["options"].model == "test-model"
+    assert "some free-form markdown" in calls[0]["prompt"]
 
 
-def test_normalize_artifact_defaults_model_from_config():
-    result = NormalizerResult()
-    client = _FakeClient(result)
+async def test_normalize_artifact_defaults_model_from_config():
+    calls: list[dict] = []
 
-    normalize_artifact("md", client=client)
+    await normalize_artifact(
+        "md", query_fn=_fake_query('{"opportunities": []}', calls)
+    )
 
     from app.config import get_config
 
-    assert client.messages.calls[0]["model"] == get_config().default_agent_model
+    assert calls[0]["options"].model == get_config().default_agent_model
 
 
 def test_persist_normalized_writes_correct_job_rows():
@@ -148,13 +151,13 @@ def test_persist_normalized_is_idempotent_on_dedupe_key():
 
 
 @pytest.mark.skipif(
-    not os.environ.get("ANTHROPIC_API_KEY"),
-    reason="live probe needs ANTHROPIC_API_KEY (real messages.parse call)",
+    not os.environ.get("OH_RUN_LIVE_PROBE"),
+    reason="set OH_RUN_LIVE_PROBE=1 to run the live local-CLI probe (needs an authed `claude` CLI)",
 )
-def test_live_probe_extracts_correct_job_row_from_fixture():
+async def test_live_probe_extracts_correct_job_row_from_fixture():
     markdown = FIXTURE.read_text()
 
-    result = normalize_artifact(markdown)
+    result = await normalize_artifact(markdown)
 
     assert len(result.opportunities) == 1, "fixture describes exactly one role"
 
