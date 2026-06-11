@@ -9,6 +9,7 @@ the default test suite runs offline; the default wraps OpenAI text-embedding-3-s
 from __future__ import annotations
 
 import hashlib
+import io
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -26,6 +27,29 @@ from app.models import (
 
 # An embedder maps a batch of texts to a batch of vectors.
 Embedder = Callable[[list[str]], list[list[float]]]
+
+
+def extract_text(*, data: bytes, media_type: DocumentMediaType) -> str:
+    """Extract plain text from raw bytes by media type. Raises ValueError if empty."""
+    if media_type in (DocumentMediaType.txt, DocumentMediaType.md):
+        text = data.decode("utf-8", errors="replace")
+    elif media_type == DocumentMediaType.pdf:
+        import pypdf
+
+        reader = pypdf.PdfReader(io.BytesIO(data))
+        text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    elif media_type == DocumentMediaType.docx:
+        import docx
+
+        document = docx.Document(io.BytesIO(data))
+        text = "\n".join(p.text for p in document.paragraphs)
+    else:  # pragma: no cover - enum is exhaustive
+        raise ValueError(f"unsupported media type: {media_type}")
+
+    text = text.strip()
+    if not text:
+        raise ValueError("no extractable text in document")
+    return text
 
 
 def chunk_text(text: str, *, size: int = 1000, overlap: int = 150) -> list[str]:
