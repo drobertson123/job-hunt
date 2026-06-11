@@ -145,3 +145,31 @@ def test_persist_normalized_is_idempotent_on_dedupe_key():
         ).all()
         assert len(rows) == 1
         assert rows[0].summary == "second"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="live probe needs ANTHROPIC_API_KEY (real messages.parse call)",
+)
+def test_live_probe_extracts_correct_job_row_from_fixture():
+    markdown = FIXTURE.read_text()
+
+    result = normalize_artifact(markdown)
+
+    assert len(result.opportunities) == 1, "fixture describes exactly one role"
+
+    with Session(engine) as s:
+        rows = persist_normalized(s, result, source="career-helper")
+    opp_id = rows[0].id
+
+    with Session(engine) as s:
+        opp = s.get(Opportunity, opp_id)
+
+    # The gate: correct STRUCTURED ROWS, not a rendered doc.
+    assert opp is not None
+    assert opp.type == OpportunityType.job
+    assert opp.title and "engineer" in opp.title.lower()
+    assert opp.organization and "northwind" in opp.organization.lower()
+    assert opp.summary  # non-empty extracted summary
+    assert opp.dedupe_key  # stable key present
+    assert opp.source == "career-helper"
