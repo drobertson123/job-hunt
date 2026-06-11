@@ -33,7 +33,8 @@ def test_search_ranks_relevant_chunk_first():
 
 
 def test_search_empty_corpus_returns_empty():
-    # fresh hash so prior docs don't match; query an unrelated term
+    # The autouse _clear_corpus fixture empties the corpus before each test,
+    # so search must hit its no-rows early-return and yield an empty list.
     with Session(engine) as s:
         hits = search(s, "nonexistent zzz", embedder=_lexical_embedder, k=5)
-    assert isinstance(hits, list)
+    assert hits == []

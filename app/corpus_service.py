@@ -163,7 +163,12 @@ class ChunkHit:
 
 
 def search(session: Session, query: str, *, embedder: Embedder, k: int = 8) -> list[ChunkHit]:
-    """Embed the query and return the top-k chunks by cosine similarity, with provenance."""
+    """Embed the query and return the top-k chunks by cosine similarity, with provenance.
+
+    Assumes every stored chunk was embedded with the same model (so all vectors
+    share one dimension). Switching ``embedding_model`` without re-ingesting the
+    corpus would make ``np.vstack``/matmul raise on the dimension mismatch.
+    """
     rows = session.exec(select(Chunk)).all()
     if not rows:
         return []
