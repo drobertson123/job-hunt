@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.config import get_config
-from app.models import Document, Profile
+from app.models import Document, Profile, _utcnow
 
 _CORPUS_CHAR_BUDGET = 24000
 
@@ -71,6 +71,8 @@ async def synthesize_profile(
     docs = session.exec(select(Document).order_by(Document.created_at)).all()
     if not docs:
         raise ValueError("corpus is empty; nothing to synthesize")
+    # Hard char budget keeps the single-turn prompt bounded; the last included
+    # document may be cut mid-text, which is acceptable for synthesis.
     corpus_text = "\n\n".join(f"# {d.title}\n{d.raw_text}" for d in docs)[:_CORPUS_CHAR_BUDGET]
 
     model = get_config().default_agent_model
@@ -94,8 +96,6 @@ async def synthesize_profile(
     row.target_titles = parsed.target_titles
     row.locations = parsed.locations
     row.source_doc_count = len(docs)
-    from app.models import _utcnow
-
     row.synthesized_at = _utcnow()
     session.add(row)
     session.commit()
