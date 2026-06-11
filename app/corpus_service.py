@@ -81,3 +81,23 @@ def chunk_text(text: str, *, size: int = 1000, overlap: int = 150) -> list[str]:
             break
         start = max(end - overlap, start + 1)
     return chunks
+
+
+def default_embedder(session: Session) -> Embedder:
+    """Build an OpenAI-backed embedder using the settings-resolved key.
+
+    Raises RuntimeError (not at import) if no key is configured.
+    """
+    api_key = settings_service.resolve_openai_key(session)
+    if not api_key:
+        raise RuntimeError("OpenAI API key is not configured (Settings or OH_OPENAI_API_KEY).")
+    model = get_config().embedding_model
+
+    def embed(texts: list[str]) -> list[list[float]]:
+        import openai
+
+        client = openai.OpenAI(api_key=api_key)
+        resp = client.embeddings.create(model=model, input=texts)
+        return [item.embedding for item in resp.data]
+
+    return embed
