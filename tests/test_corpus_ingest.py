@@ -41,9 +41,12 @@ def test_ingest_is_idempotent_on_content_hash():
     with Session(engine) as s:
         d1 = ingest_document(s, title="a.txt", source_kind=DocumentSource.upload,
                              media_type=DocumentMediaType.txt, data=text, embedder=_fake_embedder())
+        d1_id = d1.id
         d2 = ingest_document(s, title="a-again.txt", source_kind=DocumentSource.upload,
                              media_type=DocumentMediaType.txt, data=text, embedder=_fake_embedder())
         h = hashlib.sha256("identical content for dedup".encode()).hexdigest()
         docs = s.exec(select(Document).where(Document.content_hash == h)).all()
+        orphans = s.exec(select(Chunk).where(Chunk.document_id == d1_id)).all()
     assert len(docs) == 1  # replaced, not duplicated
     assert d2.id is not None
+    assert orphans == []  # the replaced document's chunks are gone, not orphaned
