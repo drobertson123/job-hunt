@@ -43,12 +43,13 @@ def chunk_text(text: str, *, size: int = 1000, overlap: int = 150) -> list[str]:
         end = min(start + size, n)
         if end < n:
             window = text[start:end]
-            brk = max(
-                window.rfind("\n\n"), window.rfind("\n"),
-                window.rfind(". "), window.rfind(" "),
-            )
-            if brk > size // 2:
-                end = start + brk + 1
+            # Prefer the most semantic boundary available past the window
+            # midpoint: paragraph, then line, then sentence, then word.
+            for pattern in ("\n\n", "\n", ". ", " "):
+                brk = window.rfind(pattern)
+                if brk > size // 2:
+                    end = start + brk + 1
+                    break
         piece = text[start:end].strip()
         if piece:
             chunks.append(piece)
