@@ -263,9 +263,14 @@ async def search_corpus(args: dict[str, Any]) -> dict[str, Any]:
     query = (args.get("query") or "").strip()
     if not query:
         return _ok("No query provided.")
-    k = int(args.get("k") or 8)
+    k = max(1, int(args.get("k") or 8))
     with Session(engine) as s:
-        embedder = _corpus_embedder(s)
+        try:
+            embedder = _corpus_embedder(s)
+        except RuntimeError as exc:
+            # e.g. no OpenAI key configured — hand the agent a message it can
+            # reason about and relay, rather than crashing the tool handler.
+            return {**_ok(str(exc)), "is_error": True}
         hits = corpus_service.search(s, query, embedder=embedder, k=k)
     if not hits:
         return _ok("No matching passages in the corpus.")

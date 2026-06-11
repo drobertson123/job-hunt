@@ -29,3 +29,13 @@ async def test_search_corpus_returns_provenance_text(monkeypatch):
     result = await search_corpus.handler({"query": "python", "k": 3})
     text = result["content"][0]["text"]
     assert "py.md" in text and "python" in text
+
+
+async def test_search_corpus_reports_missing_key_as_error(monkeypatch):
+    def _no_key(session):
+        raise RuntimeError("OpenAI API key is not configured (Settings or OH_OPENAI_API_KEY).")
+
+    monkeypatch.setattr("app.agent.tools._corpus_embedder", _no_key)
+    result = await search_corpus.handler({"query": "python"})
+    assert result.get("is_error") is True
+    assert "OpenAI API key" in result["content"][0]["text"]
