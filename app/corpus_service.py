@@ -151,3 +151,41 @@ def ingest_document(
     session.commit()
     session.refresh(doc)
     return doc
+
+
+@dataclass
+class ChunkHit:
+    chunk_id: int
+    document_id: int
+    document_title: str
+    chunk_text: str
+    score: float
+
+
+def search(session: Session, query: str, *, embedder: Embedder, k: int = 8) -> list[ChunkHit]:
+    """Embed the query and return the top-k chunks by cosine similarity, with provenance."""
+    rows = session.exec(select(Chunk)).all()
+    if not rows:
+        return []
+    q = np.asarray(embedder([query])[0], dtype=np.float32)
+    mat = np.vstack([np.frombuffer(r.embedding, dtype=np.float32) for r in rows])
+    qn = q / (np.linalg.norm(q) + 1e-12)
+    mn = mat / (np.linalg.norm(mat, axis=1, keepdims=True) + 1e-12)
+    scores = mn @ qn
+    order = np.argsort(-scores)[:k]
+
+    title_by_doc = {
+        d.id: d.title
+        for d in session.exec(
+            select(Document).where(Document.id.in_([rows[i].document_id for i in order]))
+        ).all()
+    }
+    hits: list[ChunkHit] = []
+    for i in order:
+        r = rows[int(i)]
+        hits.append(ChunkHit(
+            chunk_id=r.id, document_id=r.document_id,
+            document_title=title_by_doc.get(r.document_id, "?"),
+            chunk_text=r.text, score=float(scores[int(i)]),
+        ))
+    return hits
