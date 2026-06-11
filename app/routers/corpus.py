@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlmodel import Session, select
 
 from app import corpus_service
@@ -110,7 +110,11 @@ def delete_document(doc_id: int, session: Session = Depends(get_session)) -> dic
 async def synthesize(session: Session = Depends(get_session)) -> Profile:
     try:
         return await synthesize_profile(session)
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
+        # Empty corpus (ValueError) or malformed model output that fails schema
+        # validation — both are client-fixable, not server faults. ValidationError
+        # is listed explicitly so the 400 holds even if Pydantic stops subclassing
+        # ValueError in a future version.
         raise HTTPException(status_code=400, detail=str(e))
 
 
