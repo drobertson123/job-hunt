@@ -89,3 +89,59 @@ def test_normalize_artifact_defaults_model_from_config():
     from app.config import get_config
 
     assert client.messages.calls[0]["model"] == get_config().default_agent_model
+
+
+def test_persist_normalized_writes_correct_job_rows():
+    result = NormalizerResult(
+        opportunities=[
+            NormalizedJob(
+                title="Staff ML Engineer",
+                organization="Acme AI",
+                location="Remote (US)",
+                summary="Own the model-serving platform.",
+                details=JobDetails(salary="$220k", seniority="staff", skills=["Python", "MLOps"]),
+            )
+        ]
+    )
+
+    with Session(engine) as s:
+        rows = persist_normalized(s, result)
+
+    assert len(rows) == 1
+    opp_id = rows[0].id
+
+    with Session(engine) as s:
+        opp = s.get(Opportunity, opp_id)
+        assert opp is not None
+        assert opp.type == OpportunityType.job
+        assert opp.title == "Staff ML Engineer"
+        assert opp.organization == "Acme AI"
+        assert opp.summary == "Own the model-serving platform."
+        assert opp.dedupe_key == "acme-ai-staff-ml-engineer"
+        assert opp.source == "career-helper"
+        assert opp.details == {
+            "salary": "$220k",
+            "seniority": "staff",
+            "skills": ["Python", "MLOps"],
+        }
+
+
+def test_persist_normalized_is_idempotent_on_dedupe_key():
+    def make(summary: str) -> NormalizerResult:
+        return NormalizerResult(
+            opportunities=[
+                NormalizedJob(title="Dedupe Role", organization="Dedupe Co", summary=summary)
+            ]
+        )
+
+    with Session(engine) as s:
+        persist_normalized(s, make("first"))
+    with Session(engine) as s:
+        persist_normalized(s, make("second"))
+
+    with Session(engine) as s:
+        rows = s.exec(
+            select(Opportunity).where(Opportunity.dedupe_key == "dedupe-co-dedupe-role")
+        ).all()
+        assert len(rows) == 1
+        assert rows[0].summary == "second"

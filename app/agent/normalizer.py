@@ -120,6 +120,31 @@ def normalize_artifact(
     return response.parsed_output
 
 
-# Placeholder — replaced with real implementation in Task 4.
-def persist_normalized(*args: Any, **kwargs: Any) -> "list[Opportunity]":
-    raise NotImplementedError("implemented in Task 4")
+def persist_normalized(
+    session: Session,
+    result: NormalizerResult,
+    *,
+    source: str | None = None,
+) -> list[Opportunity]:
+    """Persist each normalized job as a `job` Opportunity via the service layer.
+
+    Returns the upserted rows. `details` is dumped to a plain dict (dropping unset
+    fields) so the Opportunity.details JSON column receives a free-form mapping.
+    """
+    rows: list[Opportunity] = []
+    for job in result.opportunities:
+        details = job.details.model_dump(exclude_none=True, exclude_defaults=True)
+        opp = services.upsert_opportunity(
+            session,
+            type=OpportunityType.job,
+            title=job.title,
+            dedupe_key=dedupe_key_for(job),
+            organization=job.organization,
+            url=job.url,
+            location=job.location,
+            summary=job.summary,
+            source=source or job.source,
+            details=details,
+        )
+        rows.append(opp)
+    return rows
