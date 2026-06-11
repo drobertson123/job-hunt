@@ -101,3 +101,53 @@ def default_embedder(session: Session) -> Embedder:
         return [item.embedding for item in resp.data]
 
     return embed
+
+
+def _to_blob(vector: list[float]) -> bytes:
+    return np.asarray(vector, dtype=np.float32).tobytes()
+
+
+def ingest_document(
+    session: Session,
+    *,
+    title: str,
+    source_kind: DocumentSource,
+    media_type: DocumentMediaType,
+    data: bytes,
+    embedder: Embedder,
+) -> Document:
+    """Extract → hash → (dedup-replace) → chunk → embed → persist atomically."""
+    raw_text = extract_text(data=data, media_type=media_type)
+    content_hash = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
+
+    # Idempotency: drop any existing document (and its chunks) with the same hash.
+    existing = session.exec(
+        select(Document).where(Document.content_hash == content_hash)
+    ).all()
+    for old in existing:
+        session.exec(delete(Chunk).where(Chunk.document_id == old.id))
+        session.delete(old)
+    session.flush()
+
+    pieces = chunk_text(raw_text)
+    if not pieces:
+        raise ValueError("document produced no chunks")
+    vectors = embedder(pieces)
+    if len(vectors) != len(pieces):
+        raise ValueError("embedder returned wrong number of vectors")
+
+    model = get_config().embedding_model
+    doc = Document(
+        title=title, source_kind=source_kind, media_type=media_type,
+        raw_text=raw_text, content_hash=content_hash, char_count=len(raw_text),
+    )
+    session.add(doc)
+    session.flush()  # assign doc.id
+    for seq, (piece, vec) in enumerate(zip(pieces, vectors)):
+        session.add(Chunk(
+            document_id=doc.id, seq=seq, text=piece,
+            embedding=_to_blob(vec), embedding_model=model,
+        ))
+    session.commit()
+    session.refresh(doc)
+    return doc
