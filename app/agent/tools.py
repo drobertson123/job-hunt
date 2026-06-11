@@ -19,7 +19,7 @@ from typing import Any, TypeVar
 from claude_agent_sdk import create_sdk_mcp_server, tool
 from sqlmodel import Session
 
-from app import services
+from app import corpus_service, services
 from app.db import engine
 from app.models import (
     ActionKind,
@@ -241,6 +241,43 @@ async def record_decision(args: dict[str, Any]) -> dict[str, Any]:
         return _ok(f"Recorded decision #{d.id}.")
 
 
+def _corpus_embedder(session: Session):
+    """Indirection point: tests monkeypatch this to inject a fake embedder."""
+    return corpus_service.default_embedder(session)
+
+
+@tool(
+    "search_corpus",
+    "Search the user's career corpus (their uploaded CV, notes, and documents) "
+    "for passages relevant to a query. Returns ranked excerpts with their source.",
+    {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "k": {"type": "integer", "description": "max results (default 8)"},
+        },
+        "required": ["query"],
+    },
+)
+async def search_corpus(args: dict[str, Any]) -> dict[str, Any]:
+    query = (args.get("query") or "").strip()
+    if not query:
+        return _ok("No query provided.")
+    k = max(1, int(args.get("k") or 8))
+    with Session(engine) as s:
+        try:
+            embedder = _corpus_embedder(s)
+        except RuntimeError as exc:
+            # e.g. no OpenAI key configured — hand the agent a message it can
+            # reason about and relay, rather than crashing the tool handler.
+            return {**_ok(str(exc)), "is_error": True}
+        hits = corpus_service.search(s, query, embedder=embedder, k=k)
+    if not hits:
+        return _ok("No matching passages in the corpus.")
+    lines = [f"[{h.document_title}] (score {h.score:.3f})\n{h.chunk_text}" for h in hits]
+    return _ok("\n\n---\n\n".join(lines))
+
+
 ALL_TOOLS = [
     save_note,
     save_opportunity,
@@ -248,6 +285,7 @@ ALL_TOOLS = [
     record_action,
     save_artifact,
     record_decision,
+    search_corpus,
 ]
 
 # Tool names the agent is allowed to call (mcp__app__*).
