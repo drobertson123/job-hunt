@@ -79,7 +79,34 @@ git commit -m "feat(corpus): add numpy/pypdf/docx/openai deps + embedding_model 
 
 **Files:**
 - Modify: `app/models.py` (append new tables + enums; update module docstring list)
+- Modify: `tests/conftest.py` (per-test corpus cleanup — see Step 0)
 - Test: `tests/test_corpus_models.py`
+
+- [ ] **Step 0: Add a per-test corpus-cleanup fixture (CRITICAL — prevents a full-suite-only failure)**
+
+The suite shares ONE session-scoped DB (`conftest.py`) with no per-test rollback, and
+`search()` (Task 7) reads **every** `Chunk` row and stacks their embeddings. Without cleanup,
+chunks from different tests accumulate with mismatched byte-lengths (e.g. the 2-byte dummy
+embedding below, plus 8-/5-/2-dim vectors from other tasks), and `np.frombuffer`/`np.vstack`
+crash — but ONLY in the full `pytest -q` run (Task 12), not in per-file task runs. Add a
+function-scoped autouse fixture so each test starts with empty corpus tables. (Verified safe:
+no existing test reads these new tables.)
+
+In `tests/conftest.py`, append:
+```python
+@pytest.fixture(autouse=True)
+def _clear_corpus():
+    from sqlmodel import Session, delete
+
+    from app.db import engine
+    from app.models import Chunk, Document, Profile
+
+    with Session(engine) as s:
+        for model in (Chunk, Document, Profile):
+            s.exec(delete(model))
+        s.commit()
+    yield
+```
 
 - [ ] **Step 1: Write the failing test**
 
@@ -980,18 +1007,16 @@ async def test_synthesize_overwrites_single_row():
 
 async def test_synthesize_empty_corpus_raises():
     import pytest
-    # use a fresh in-memory expectation: clear documents first
-    with Session(engine) as s:
-        for d in s.exec(select(Document)).all():
-            s.delete(d)
-        s.commit()
+
+    # The autouse _clear_corpus fixture (Task 2, Step 0) guarantees an empty corpus.
     calls: list[dict] = []
     with pytest.raises(ValueError, match="empty"):
         with Session(engine) as s:
             await synthesize_profile(s, query_fn=_fake_query("{}", calls))
 ```
 
-> Note: `test_synthesize_overwrites_single_row` and `test_synthesize_empty_corpus_raises` both mutate the shared corpus. Run the file as a unit; within it, `overwrites` runs after `writes_profile_row` (which ingests a doc) and `empty_corpus` clears docs last. Keep them in this order.
+> The autouse `_clear_corpus` fixture empties the corpus tables before each test, so these
+> tests are independent of execution order — no manual setup/teardown needed.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1468,4 +1493,4 @@ The branch `feature/phase2-corpus-rag` is ready for `superpowers:finishing-a-dev
 
 **Placeholder scan:** No TBD/TODO; every code step shows complete code; the PDF fixture generation is fully scripted with a fallback note. The one judgment call (fixture generation) includes a verification command.
 
-**Note on test isolation:** `conftest.py` uses one session-scoped DB. Tests that assert corpus emptiness (`test_search_empty_corpus_returns_empty`, `synthesize` tests) account for shared state by querying their own inserted rows or clearing first; ordering notes are included where mutation order matters.
+**Note on test isolation (CRITICAL):** `conftest.py` uses one session-scoped DB with no per-test rollback, and `search()` reads ALL chunk rows. Without cleanup, mismatched embedding byte-lengths across tests crash `np.frombuffer`/`np.vstack` — but ONLY in the full `pytest -q` run (Task 12), never in per-file task runs, so a TDD executor would see every task pass and then hit a red full suite. Task 2 Step 0 adds a function-scoped autouse `_clear_corpus` fixture (clears Chunk/Document/Profile — all new tables, verified no other test reads them) that makes `search()` deterministic and the tests order-independent. This fixture is a required step, not optional.
