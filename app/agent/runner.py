@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,6 +55,8 @@ from app.models import Event, EventType, Run, RunStatus
 # unused Read + WebFetch is a read-local→exfiltrate channel for prompt-injected
 # postings; re-add scoped to career_pack_dir when supporting files arrive.
 ALLOWED_TOOLS = [*ALL_TOOL_NAMES, "Skill", "WebSearch", "WebFetch"]
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -191,10 +194,16 @@ async def stream_run(
                 yield emit(EventType.result, json.dumps(payload))
                 break  # one-shot: stop after the turn completes (streaming-input mode)
         # Review gate: auto-check generative artifacts created by this run
-        # (best-effort; never fails the run). to_thread because the embedder
-        # is a blocking network call. Applies to chat AND capability runs so
-        # the gate can't be bypassed by phrasing.
-        await asyncio.to_thread(grounding_service.auto_ground_run_artifacts, run_id)
+        # (best-effort; never fails or hangs the run). to_thread because the
+        # embedder is a blocking network call; wait_for bounds it. Applies to
+        # chat AND capability runs so the gate can't be bypassed by phrasing.
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(grounding_service.auto_ground_run_artifacts, run_id),
+                timeout=get_config().agent_timeout_seconds,
+            )
+        except Exception:  # noqa: BLE001 — the run's outcome must not depend on grounding
+            logger.warning("post-run auto-grounding failed for run %s", run_id, exc_info=True)
         _set_run_status(run_id, RunStatus.completed)
         yield emit(EventType.status, RunStatus.completed.value)
     except Exception as exc:  # noqa: BLE001 - surface any failure as an event

@@ -271,15 +271,19 @@ def auto_ground_run_artifacts(run_id: str) -> list[int]:
     must still succeed; an unchecked artifact simply stays `draft`. Returns
     the artifact ids that were checked.
     """
-    with Session(engine) as session:
-        ids = list(
-            session.exec(
-                select(Artifact.id)
-                .where(Artifact.run_id == run_id)
-                .where(Artifact.kind.in_(GENERATIVE_KINDS))
-                .order_by(Artifact.id)
-            ).all()
-        )
+    try:
+        with Session(engine) as session:
+            ids = list(
+                session.exec(
+                    select(Artifact.id)
+                    .where(Artifact.run_id == run_id)
+                    .where(Artifact.kind.in_(GENERATIVE_KINDS))
+                    .order_by(Artifact.id)
+                ).all()
+            )
+    except Exception:  # noqa: BLE001 — never fail the run for a lookup error
+        logger.warning("auto-grounding id lookup failed for run %s", run_id, exc_info=True)
+        return []
     checked: list[int] = []
     for artifact_id in ids:
         try:
