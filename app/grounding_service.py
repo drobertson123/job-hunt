@@ -289,5 +289,7 @@ def auto_ground_run_artifacts(run_id: str) -> list[int]:
                 )
             checked.append(artifact_id)
         except Exception as exc:  # noqa: BLE001 — never fail the run
-            logger.warning("auto-grounding skipped for artifact %s: %s", artifact_id, exc)
+            logger.warning(
+                "auto-grounding skipped for artifact %s: %s", artifact_id, exc, exc_info=True
+            )
     return checked

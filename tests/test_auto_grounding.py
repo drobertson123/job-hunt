@@ -95,3 +95,23 @@ def test_other_runs_artifacts_untouched(fake_auto_embedder):
     assert grounding_service.auto_ground_run_artifacts(run_a.id) == []
     with Session(engine) as s:
         assert s.get(Artifact, aid_b).review_status == ReviewStatus.draft
+
+
+def test_one_failure_does_not_stop_other_checks(fake_auto_embedder, monkeypatch):
+    _seed_corpus()
+    run = runner.create_run("x", model=None)
+    aid_bad = _make_artifact(ArtifactKind.cv, run.id)
+    aid_good = _make_artifact(ArtifactKind.cover_letter, run.id)
+
+    real_check = grounding_service.run_grounding_check
+
+    def flaky_check(session, artifact_id, **kwargs):
+        if artifact_id == aid_bad:
+            raise RuntimeError("boom")
+        return real_check(session, artifact_id, **kwargs)
+
+    monkeypatch.setattr(grounding_service, "run_grounding_check", flaky_check)
+    assert grounding_service.auto_ground_run_artifacts(run.id) == [aid_good]
+    with Session(engine) as s:
+        assert s.get(Artifact, aid_bad).review_status == ReviewStatus.draft
+        assert s.get(Artifact, aid_good).review_status == ReviewStatus.needs_review
