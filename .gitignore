@@ -28,3 +28,4 @@ sessions/
 
 # OS
 .DS_Store
+.superpowers/
