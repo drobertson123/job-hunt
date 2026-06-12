@@ -149,15 +149,7 @@ export async function exportArtifact(
   const res = await fetch(`/api/artifacts/${id}/export?format=${format}`, {
     method: "POST",
   });
-  if (!res.ok) {
-    let detail = `export failed: ${res.status}`;
-    try {
-      detail = (await res.json()).detail ?? detail;
-    } catch {
-      /* keep status fallback */
-    }
-    throw new Error(detail);
-  }
+  if (!res.ok) await throwDetail(res, `export failed: ${res.status}`);
   return res.json();
 }
 
@@ -184,4 +176,91 @@ export async function updateSettings(
   });
   if (!res.ok) throw new Error(`settings update failed: ${res.status}`);
   return res.json();
+}
+
+// ----- corpus & profile (spec: 2026-06-12-corpus-profile-ui-design.md) -----
+
+export type CorpusDocument = {
+  id: number;
+  title: string;
+  source_kind: "upload" | "paste";
+  media_type: "pdf" | "docx" | "txt" | "md";
+  char_count: number;
+};
+
+export type Profile = {
+  id: number;
+  headline: string | null;
+  summary: string | null;
+  skills: string[];
+  experience: Record<string, unknown>[];
+  achievements: string[];
+  target_titles: string[];
+  locations: string[];
+  source_doc_count: number;
+  synthesized_at: string;
+};
+
+/** Throw an Error carrying the server's `detail` when present. */
+async function throwDetail(res: Response, fallback: string): Promise<never> {
+  let detail = fallback;
+  try {
+    detail = (await res.json()).detail ?? detail;
+  } catch {
+    /* keep fallback */
+  }
+  throw new Error(detail);
+}
+
+export async function fetchDocuments(): Promise<CorpusDocument[]> {
+  const res = await fetch("/api/corpus/documents");
+  if (!res.ok) throw new Error(`documents failed: ${res.status}`);
+  return res.json();
+}
+
+/** Multipart upload — no Content-Type header; the browser sets the boundary. */
+export async function uploadDocument(
+  file: File,
+  title?: string,
+): Promise<CorpusDocument> {
+  const form = new FormData();
+  form.append("file", file);
+  if (title) form.append("title", title);
+  const res = await fetch("/api/corpus/documents/upload", {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) await throwDetail(res, `upload failed: ${res.status}`);
+  return res.json();
+}
+
+export async function pasteDocument(
+  title: string,
+  text: string,
+): Promise<CorpusDocument> {
+  const res = await fetch("/api/corpus/documents", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, text }),
+  });
+  if (!res.ok) await throwDetail(res, `paste failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteDocument(id: number): Promise<void> {
+  const res = await fetch(`/api/corpus/documents/${id}`, { method: "DELETE" });
+  if (!res.ok) await throwDetail(res, `delete failed: ${res.status}`);
+}
+
+/** LLM call — can take tens of seconds; callers should show a busy state. */
+export async function synthesizeProfile(): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile/synthesize", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `synthesize failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getProfile(): Promise<Profile | null> {
+  const res = await fetch("/api/corpus/profile");
+  if (!res.ok) throw new Error(`profile failed: ${res.status}`);
+  return res.json(); // server returns JSON null when no profile exists
 }
