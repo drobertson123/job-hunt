@@ -79,6 +79,10 @@ def test_get_grounding_before_check_404(client, fake_embedder):
     assert client.get(f"/api/artifacts/{aid}/grounding").status_code == 404
 
 
+def test_get_grounding_missing_artifact_404(client, fake_embedder):
+    assert client.get("/api/artifacts/999999/grounding").status_code == 404
+
+
 def test_get_grounding_reports_stale_after_body_change(client, fake_embedder):
     aid = _seed()
     assert client.post(f"/api/artifacts/{aid}/grounding").status_code == 200

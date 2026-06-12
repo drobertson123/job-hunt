@@ -177,7 +177,8 @@ def annotate(text: str, findings: list[dict]) -> str:
     return out
 
 
-def _body_hash(body: str) -> str:
+def body_hash(body: str) -> str:
+    """sha256 hex of an artifact body — the staleness key on GroundingReport."""
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
@@ -203,7 +204,7 @@ def run_grounding_check(
 
     report = GroundingReport(
         artifact_id=artifact_id,
-        body_hash=_body_hash(artifact.body),
+        body_hash=body_hash(artifact.body),
         threshold=result.threshold,
         embedding_model=result.embedding_model,
         findings=[asdict(f) for f in result.findings],

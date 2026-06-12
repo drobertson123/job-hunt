@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -80,9 +79,7 @@ class GroundingOut(BaseModel):
 
 
 def _grounding_out(artifact: Artifact, report: GroundingReport) -> GroundingOut:
-    stale = (
-        hashlib.sha256(artifact.body.encode("utf-8")).hexdigest() != report.body_hash
-    )
+    stale = grounding_service.body_hash(artifact.body) != report.body_hash
     # Stale offsets index a body that no longer exists — never apply them.
     annotated = (
         artifact.body if stale else grounding_service.annotate(artifact.body, report.findings)
@@ -113,6 +110,8 @@ def run_grounding(
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    # run_grounding_check committed; this re-read gets the post-commit row
+    # (refreshed review_status) rather than an expired in-session object.
     artifact = session.get(Artifact, artifact_id)
     return _grounding_out(artifact, report)
 
