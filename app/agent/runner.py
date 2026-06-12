@@ -45,10 +45,13 @@ from app.db import engine
 from app.models import Event, EventType, Run, RunStatus
 
 # The agent may call our in-process write-back tools, the Skill tool (career
-# pack), Read (skills' supporting files), and web research tools. The gate
-# below denies everything else (ToolSearch, a benign discovery meta-tool, is
-# exempt by the SDK and is what lets the agent find these mcp__app__* tools).
-ALLOWED_TOOLS = [*ALL_TOOL_NAMES, "Skill", "Read", "WebSearch", "WebFetch"]
+# pack) and web research tools. The gate below denies everything else
+# (ToolSearch, a benign discovery meta-tool, is exempt by the SDK and is what
+# lets the agent find these mcp__app__* tools).
+# Read is deliberately NOT allowed: no skill ships supporting files yet, and an
+# unused Read + WebFetch is a read-local→exfiltrate channel for prompt-injected
+# postings; re-add scoped to career_pack_dir when supporting files arrive.
+ALLOWED_TOOLS = [*ALL_TOOL_NAMES, "Skill", "WebSearch", "WebFetch"]
 
 
 def _utcnow() -> datetime:

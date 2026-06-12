@@ -66,7 +66,7 @@ def test_build_options_enables_career_pack(tmp_path):
     assert cfg.career_pack_dir.is_absolute()
     assert opts.plugins == [{"type": "local", "path": str(cfg.career_pack_dir)}]
     assert opts.skills == caps.SKILL_NAMES
-    for name in ("Skill", "Read", "WebSearch", "WebFetch"):
+    for name in ("Skill", "WebSearch", "WebFetch"):
         assert name in opts.allowed_tools
     assert all(t in opts.allowed_tools for t in ALL_TOOL_NAMES)
     # the plugin path must point at the real pack (not depend on cwd)
@@ -74,7 +74,7 @@ def test_build_options_enables_career_pack(tmp_path):
 
 
 async def test_gate_allows_skill_tools_denies_others():
-    for allowed in ("Skill", "Read", "WebSearch", "WebFetch"):
+    for allowed in ("Skill", "WebSearch", "WebFetch"):
         assert (await runner._gate(allowed, {}, None)).behavior == "allow"
-    for forbidden in ("Bash", "Write", "Edit", "mcp__app__delete_everything"):
+    for forbidden in ("Bash", "Write", "Edit", "Read", "mcp__app__delete_everything"):
         assert (await runner._gate(forbidden, {}, None)).behavior == "deny"

@@ -56,9 +56,11 @@ the capability endpoint can name its skill exactly.
   "interview-prep", "fit-analysis"]`. Per SDK docs this is "the single place to
   turn skills on" — it auto-enables the Skill tool and setting sources;
   `setting_sources` stays `None`.
-- `ALLOWED_TOOLS` gains `Skill`, `Read` (skills' supporting files),
-  `WebSearch`, `WebFetch` (company research). The `_gate` `can_use_tool` callback
-  is unchanged — it already reads the list.
+- `ALLOWED_TOOLS` gains `Skill`, `WebSearch`, `WebFetch` (company research).
+  `Read` is deliberately excluded until a skill ships supporting files (then
+  re-added scoped to the plugin dir) — unused Read + WebFetch would be an
+  exfiltration channel for prompt-injected postings. The `_gate` `can_use_tool`
+  callback is unchanged — it already reads the list.
 
 ## 2. Skill contracts
 
@@ -151,3 +153,6 @@ Offline-by-default, existing conventions (fake `query_fn`, injectable embedder,
 - Five-skill triggering precision from free-form chat is unproven until the live
   gate; if chat triggering is flaky, the capability endpoint is the reliable path
   and SKILL.md descriptions get tuned.
+- Prompt-injection: pasted postings and fetched pages are untrusted input to a
+  tool-bearing agent. Mitigations: tool-name allowlist gate, no Read/Write/Bash,
+  single-user local blast radius. Revisit if Read is ever re-added.
