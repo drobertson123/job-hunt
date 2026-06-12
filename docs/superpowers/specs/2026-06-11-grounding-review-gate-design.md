@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-11
 **Phase:** 2, slice C (job track only)
-**Status:** Approved (pending spec review)
+**Status:** Implemented
 
 ## Context
 

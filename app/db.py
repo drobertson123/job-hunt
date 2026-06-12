@@ -21,6 +21,8 @@ def _ensure_column(target_engine, table: str, column: str, ddl: str) -> None:
     """Idempotent ALTER TABLE guard: create_all never adds columns to existing tables."""
     with target_engine.connect() as conn:
         cols = [row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")]
+        if not cols:
+            return  # table doesn't exist yet; create_all will build it complete
         if column not in cols:
             conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
             conn.commit()

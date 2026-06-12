@@ -47,3 +47,17 @@ def test_ensure_column_adds_and_is_idempotent(tmp_path):
     with scratch.connect() as conn:
         cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(artifacts)")]
     assert "review_status" in cols
+
+
+def test_ensure_column_is_noop_when_table_missing(tmp_path):
+    # Pre-Phase-1 DBs have no artifacts table at all; create_all builds it
+    # complete later, so the guard must not try to ALTER a missing table.
+    from sqlmodel import create_engine
+
+    scratch = create_engine(f"sqlite:///{tmp_path}/empty.db")
+    _ensure_column(scratch, "artifacts", "review_status", "VARCHAR DEFAULT 'draft'")
+    with scratch.connect() as conn:
+        tables = [r[0] for r in conn.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )]
+    assert "artifacts" not in tables  # nothing created, nothing raised
