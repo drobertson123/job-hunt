@@ -134,6 +134,33 @@ export async function fetchArtifacts(): Promise<Artifact[]> {
   return res.json();
 }
 
+export type ExportResult = {
+  artifact_id: number;
+  format: string;
+  file_path: string;
+  download_url: string;
+};
+
+/** Render + persist an export; throws with the server's detail on failure. */
+export async function exportArtifact(
+  id: number,
+  format: "docx" | "pdf",
+): Promise<ExportResult> {
+  const res = await fetch(`/api/artifacts/${id}/export?format=${format}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    let detail = `export failed: ${res.status}`;
+    try {
+      detail = (await res.json()).detail ?? detail;
+    } catch {
+      /* keep status fallback */
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 export async function fetchNotes(runId?: string): Promise<Note[]> {
   const url = runId ? `/api/notes?run_id=${encodeURIComponent(runId)}` : "/api/notes";
   const res = await fetch(url);
