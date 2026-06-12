@@ -175,3 +175,64 @@ def annotate(text: str, findings: list[dict]) -> str:
     for f in sorted(unsupported, key=lambda f: f["start"], reverse=True):
         out = out[: f["start"]] + f"[MISSING: {out[f['start']:f['end']]}]" + out[f["end"]:]
     return out
+
+
+def _body_hash(body: str) -> str:
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def run_grounding_check(
+    session: Session,
+    artifact_id: int,
+    *,
+    embedder: Embedder,
+    threshold: float | None = None,
+) -> GroundingReport:
+    """Check an artifact's body, persist the report (replacing any prior one),
+    and move the artifact to needs_review."""
+    artifact = session.get(Artifact, artifact_id)
+    if artifact is None:
+        raise LookupError(f"artifact {artifact_id} not found")
+    result = check_grounding(session, artifact.body, embedder=embedder, threshold=threshold)
+
+    for old in session.exec(
+        select(GroundingReport).where(GroundingReport.artifact_id == artifact_id)
+    ).all():
+        session.delete(old)
+    session.flush()  # push DELETEs before the INSERT to avoid UNIQUE conflict
+
+    report = GroundingReport(
+        artifact_id=artifact_id,
+        body_hash=_body_hash(artifact.body),
+        threshold=result.threshold,
+        embedding_model=result.embedding_model,
+        findings=[asdict(f) for f in result.findings],
+        checked_count=result.checked_count,
+        unsupported_count=result.unsupported_count,
+    )
+    session.add(report)
+    artifact.review_status = ReviewStatus.needs_review
+    artifact.updated_at = _utcnow()
+    session.add(artifact)
+    session.commit()
+    session.refresh(report)
+    return report
+
+
+def approve_artifact(session: Session, artifact_id: int) -> Artifact:
+    """needs_review -> approved. Any other starting status is rejected:
+    an unchecked draft cannot be approved — that IS the review gate."""
+    artifact = session.get(Artifact, artifact_id)
+    if artifact is None:
+        raise LookupError(f"artifact {artifact_id} not found")
+    if artifact.review_status != ReviewStatus.needs_review:
+        raise InvalidStatusTransition(
+            f"cannot approve from status '{artifact.review_status.value}' — "
+            "run a grounding check first"
+        )
+    artifact.review_status = ReviewStatus.approved
+    artifact.updated_at = _utcnow()
+    session.add(artifact)
+    session.commit()
+    session.refresh(artifact)
+    return artifact
