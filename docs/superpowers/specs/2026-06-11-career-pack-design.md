@@ -103,8 +103,8 @@ selects artifacts created with that `run_id` whose kind ∈ {`cv`, `cover_letter
 `pitch`, `outreach`} and calls `run_grounding_check` on each — they land
 `needs_review` with findings ready. `research_brief`, `fit_analysis`, and other
 kinds stay `draft`. Grounding failure (e.g. missing OpenAI key, empty corpus) is
-**non-fatal**: log + persist nothing, artifact stays `draft`; the run still
-succeeds. This applies to ALL runs (chat and capability) so the gate can't be
+**non-fatal**: if `run_grounding_check` raises (no key, empty corpus), log it,
+persist no report, leave the artifact `draft`; the run still succeeds. This applies to ALL runs (chat and capability) so the gate can't be
 bypassed by phrasing.
 
 **Frontend (minimal).** One button per capability (driven by
@@ -132,11 +132,13 @@ Offline-by-default, existing conventions (fake `query_fn`, injectable embedder,
 - **Endpoint tests:** registry list; 404/422 validation; prompt templating
   includes opportunity fields; capability run produces events replayable via
   `events_after`.
-- **Live gate** (`OH_RUN_LIVE_PROBE=1`, authed `claude` CLI): seed an opportunity
-  + small corpus, invoke `fit-analysis` via the capability path, assert the
-  `fit_analysis` artifact row and `record_decision` row appear with correct
-  field values. This is the seam proof: real discovery of a repo-local plugin
-  skill from an isolated session `cwd`.
+- **Live gate** (`OH_RUN_LIVE_PROBE=1`, authed `claude` CLI; deliberately no
+  OpenAI dependency): seed an opportunity + a profile row, invoke `fit-analysis`
+  via the capability path, assert the `fit_analysis` artifact row and
+  `record_decision` row appear with correct field values. This is the seam
+  proof: real discovery of a repo-local plugin skill from an isolated session
+  `cwd`. (fit-analysis scores profile vs opportunity; corpus search is optional
+  for it, so the gate avoids needing an embedder key.)
 
 ## Risks / notes
 
