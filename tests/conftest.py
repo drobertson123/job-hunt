@@ -15,6 +15,7 @@ from pathlib import Path
 _TMP = Path(tempfile.mkdtemp(prefix="oh-test-"))
 os.environ["OH_DATA_DIR"] = str(_TMP / "data")
 os.environ["OH_SESSIONS_DIR"] = str(_TMP / "sessions")
+os.environ["OH_EXPORTS_DIR"] = str(_TMP / "exports")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

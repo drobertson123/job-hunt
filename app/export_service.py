@@ -74,3 +74,66 @@ def render_with_pandoc(body_md: str, format: ArtifactFormat) -> bytes:
             tail = result.stderr.decode("utf-8", "replace")[-500:]
             raise RenderFailed(f"pandoc failed for {format.value}: {tail}")
         return out_path.read_bytes()
+
+
+# --------------------------------------------------------------------------- #
+# Orchestration + gate.
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class ExportResult:
+    artifact_id: int
+    format: ArtifactFormat
+    path: Path
+    download_url: str
+
+
+def sanitize_filename(title: str, ext: str, version: int) -> str:
+    """Human filename for Content-Disposition; titles come from agent output."""
+    clean = re.sub(r"[\\/:\0]", "_", title)
+    clean = re.sub(r"[\r\n\t]+", " ", clean)
+    clean = re.sub(r"[\x00-\x1f]", "", clean).strip() or "artifact"
+    return f"{clean} v{version}.{ext}"
+
+
+def export_artifact(
+    session: Session,
+    artifact_id: int,
+    format: ArtifactFormat,
+    *,
+    renderer=render_with_pandoc,
+) -> ExportResult:
+    """Render an artifact's body and persist it under exports_dir.
+
+    The review gate: generative kinds (same constant the post-run
+    auto-grounding uses) must be `approved` — export is where review-before-
+    send is enforced. Other kinds are internal documents and export freely.
+    """
+    if format not in EXPORT_FORMATS:
+        raise ValueError(f"not an export format: {format.value}")
+    artifact = session.get(Artifact, artifact_id)
+    if artifact is None:
+        raise LookupError(f"artifact {artifact_id} not found")
+    if artifact.kind in GENERATIVE_KINDS and artifact.review_status != ReviewStatus.approved:
+        raise ExportNotAllowed(
+            f"artifact {artifact_id} is {artifact.review_status.value}; "
+            "generative artifacts must be approved before export — run the "
+            "grounding check and approve it first"
+        )
+
+    data = renderer(artifact.body, format)
+    cfg = get_config()
+    path = cfg.exports_dir / f"artifact-{artifact.id}-v{artifact.version}.{format.value}"
+    path.write_bytes(data)
+
+    artifact.file_path = str(path)  # informational: latest export
+    artifact.updated_at = _utcnow()
+    session.add(artifact)
+    session.commit()
+    return ExportResult(
+        artifact_id=artifact_id,
+        format=format,
+        path=path,
+        download_url=f"/api/artifacts/{artifact_id}/export/{format.value}",
+    )
