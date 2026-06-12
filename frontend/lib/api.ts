@@ -16,6 +16,33 @@ export type Note = {
   created_at: string;
 };
 
+export type Artifact = {
+  id: number;
+  title: string;
+  body: string;
+  kind: string;
+  opportunity_id: string | null;
+  provenance: string | null;
+  version: number;
+  review_status: "draft" | "needs_review" | "approved";
+  created_at: string;
+};
+
+export type Opportunity = {
+  id: string;
+  title: string;
+  organization: string | null;
+  stage: string;
+};
+
+export type Capability = {
+  name: string;
+  label: string;
+  description: string;
+  requires_opportunity: boolean;
+  requires_input: boolean;
+};
+
 export type SettingsView = {
   anthropic_key_configured: boolean;
   openai_key_configured: boolean;
@@ -24,20 +51,21 @@ export type SettingsView = {
   deep_analysis_model: string;
 };
 
-/** POST a prompt and stream agent events (SSE over fetch). */
-export async function streamChat(
-  prompt: string,
+/** POST JSON to an SSE endpoint and dispatch each agent event. */
+async function streamSSE(
+  url: string,
+  body: unknown,
   onEvent: (e: AgentEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch("/api/chat", {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!res.ok || !res.body) {
-    throw new Error(`chat failed: ${res.status}`);
+    throw new Error(`${url} failed: ${res.status}`);
   }
 
   const reader = res.body.getReader();
@@ -62,6 +90,48 @@ export async function streamChat(
       }
     }
   }
+}
+
+/** POST a prompt and stream agent events. */
+export async function streamChat(
+  prompt: string,
+  onEvent: (e: AgentEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return streamSSE("/api/chat", { prompt }, onEvent, signal);
+}
+
+/** Invoke a named capability (templated skill run) and stream its events. */
+export async function invokeCapability(
+  name: string,
+  body: { opportunity_id?: string; input?: string },
+  onEvent: (e: AgentEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return streamSSE(
+    `/api/capabilities/${encodeURIComponent(name)}`,
+    body,
+    onEvent,
+    signal,
+  );
+}
+
+export async function fetchCapabilities(): Promise<Capability[]> {
+  const res = await fetch("/api/capabilities");
+  if (!res.ok) throw new Error(`capabilities failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchOpportunities(): Promise<Opportunity[]> {
+  const res = await fetch("/api/opportunities");
+  if (!res.ok) throw new Error(`opportunities failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchArtifacts(): Promise<Artifact[]> {
+  const res = await fetch("/api/artifacts");
+  if (!res.ok) throw new Error(`artifacts failed: ${res.status}`);
+  return res.json();
 }
 
 export async function fetchNotes(runId?: string): Promise<Note[]> {

@@ -35,6 +35,9 @@ class AppConfig(BaseSettings):
     # --- Storage ---
     data_dir: Path = ROOT_DIR / "data"
     sessions_dir: Path = ROOT_DIR / "sessions"  # per-agent-session working dirs
+    # Authored-skill plugin (career pack). Absolute path — the agent session's
+    # cwd is an isolated per-run dir, so discovery must NOT be cwd-relative.
+    career_pack_dir: Path = ROOT_DIR / "skills" / "career-pack"
 
     # --- Static frontend (built Next.js export) ---
     frontend_dir: Path = ROOT_DIR / "frontend" / "out"

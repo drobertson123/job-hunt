@@ -14,7 +14,9 @@ Design notes (Phase 0):
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,14 +41,22 @@ from app.agent.tools import (
     build_app_mcp_server,
     current_run_id,
 )
+from app import grounding_service
+from app.capabilities import SKILL_NAMES
 from app.config import get_config
 from app.db import engine
 from app.models import Event, EventType, Run, RunStatus
 
-# The agent may only call our in-process write-back tools. The gate below denies
-# everything else (ToolSearch, a benign discovery meta-tool, is exempt by the SDK
-# and is what lets the agent find these mcp__app__* tools).
-ALLOWED_TOOLS = list(ALL_TOOL_NAMES)
+# The agent may call our in-process write-back tools, the Skill tool (career
+# pack) and web research tools. The gate below denies everything else
+# (ToolSearch, a benign discovery meta-tool, is exempt by the SDK and is what
+# lets the agent find these mcp__app__* tools).
+# Read is deliberately NOT allowed: no skill ships supporting files yet, and an
+# unused Read + WebFetch is a read-local→exfiltrate channel for prompt-injected
+# postings; re-add scoped to career_pack_dir when supporting files arrive.
+ALLOWED_TOOLS = [*ALL_TOOL_NAMES, "Skill", "WebSearch", "WebFetch"]
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -85,7 +95,13 @@ def build_options(*, model: str | None, cwd: Path, api_key: str | None) -> Claud
         max_turns=cfg.agent_max_turns,
         cwd=str(cwd),
         env=env,
-        setting_sources=None,  # Phase 0: no filesystem skills yet (Phase 2)
+        # Authored skills ship as a repo-local plugin with an ABSOLUTE path —
+        # per-run cwd isolation stays intact and discovery can't silently
+        # find zero skills. `skills=` is the SDK's single enablement knob
+        # (auto-configures the Skill tool); setting_sources stays None.
+        plugins=[{"type": "local", "path": str(cfg.career_pack_dir)}],
+        skills=list(SKILL_NAMES),
+        setting_sources=None,
     )
 
 
@@ -177,6 +193,17 @@ async def stream_run(
                 }
                 yield emit(EventType.result, json.dumps(payload))
                 break  # one-shot: stop after the turn completes (streaming-input mode)
+        # Review gate: auto-check generative artifacts created by this run
+        # (best-effort; never fails or hangs the run). to_thread because the
+        # embedder is a blocking network call; wait_for bounds it. Applies to
+        # chat AND capability runs so the gate can't be bypassed by phrasing.
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(grounding_service.auto_ground_run_artifacts, run_id),
+                timeout=get_config().agent_timeout_seconds,
+            )
+        except Exception:  # noqa: BLE001 — the run's outcome must not depend on grounding
+            logger.warning("post-run auto-grounding failed for run %s", run_id, exc_info=True)
         _set_run_status(run_id, RunStatus.completed)
         yield emit(EventType.status, RunStatus.completed.value)
     except Exception as exc:  # noqa: BLE001 - surface any failure as an event

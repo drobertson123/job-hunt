@@ -21,6 +21,7 @@ from app.routers import (
     actions,
     artifacts,
     attention,
+    capabilities,
     chat,
     corpus,
     health,
@@ -42,6 +43,7 @@ app = FastAPI(title="Opportunity Hunter", version=__version__, lifespan=lifespan
 app.include_router(health.router)
 app.include_router(settings.router)
 app.include_router(chat.router)
+app.include_router(capabilities.router)
 app.include_router(notes.router)
 app.include_router(runs.router)
 app.include_router(opportunities.router)
