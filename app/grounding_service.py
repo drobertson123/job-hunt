@@ -161,3 +161,17 @@ def check_grounding(
             supported=score >= threshold,
         ))
     return GroundingResult(findings=findings, threshold=threshold, embedding_model=model)
+
+
+def annotate(text: str, findings: list[dict]) -> str:
+    """Return a copy of `text` with [MISSING: ...] wrapped around unsupported spans.
+
+    Takes the persisted (dict) form of findings. Applies markers in reverse
+    offset order so earlier offsets stay valid. Never mutates stored bodies —
+    annotation is always derived.
+    """
+    out = text
+    unsupported = [f for f in findings if not f["supported"]]
+    for f in sorted(unsupported, key=lambda f: f["start"], reverse=True):
+        out = out[: f["start"]] + f"[MISSING: {out[f['start']:f['end']]}]" + out[f["end"]:]
+    return out
