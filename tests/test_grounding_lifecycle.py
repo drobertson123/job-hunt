@@ -90,3 +90,23 @@ def test_check_missing_artifact_raises_lookup_error():
     with Session(engine) as s:
         with pytest.raises(LookupError):
             run_grounding_check(s, 999_999, embedder=_lexical_embedder)
+
+
+def test_custom_threshold_flows_into_persisted_report():
+    with Session(engine) as s:
+        aid = _seed(s)
+        report = run_grounding_check(
+            s, aid, embedder=_lexical_embedder, threshold=0.99
+        )
+    assert report.threshold == 0.99
+    assert report.unsupported_count == 2  # near-1.0 fails both sentences
+
+
+def test_recheck_after_approval_returns_to_needs_review():
+    with Session(engine) as s:
+        aid = _seed(s)
+        run_grounding_check(s, aid, embedder=_lexical_embedder)
+        approve_artifact(s, aid)
+        run_grounding_check(s, aid, embedder=_lexical_embedder)
+        artifact = s.get(Artifact, aid)
+    assert artifact.review_status == ReviewStatus.needs_review
