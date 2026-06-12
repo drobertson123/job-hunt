@@ -1,7 +1,7 @@
 # Business Pack — authored business skills (Phase 3 slice F)
 
 **Date:** 2026-06-12
-**Status:** Approved design
+**Status:** Implemented (plan docs/superpowers/plans/2026-06-12-business-pack.md); live gate PASSED 2026-06-12 (real CLI session with both plugins discovered business-pack:qualify-opportunity and followed its contract, 38s)
 **Decided with user:** Phase 3 decomposed F (business pack) → G (reused MIT
 components + normalizer breadth) → H (cross-domain rubric); F first. Four
 capabilities; `proposal` stays UNGATED (user decision — internal working doc;
