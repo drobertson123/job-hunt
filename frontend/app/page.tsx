@@ -18,6 +18,7 @@ import {
   streamChat,
   updateSettings,
 } from "@/lib/api";
+import ProfileTab from "./components/ProfileTab";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -41,6 +42,7 @@ export default function Home() {
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
+  const [canvasTab, setCanvasTab] = useState<"workspace" | "profile">("workspace");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const refreshCanvas = useCallback(async () => {
@@ -233,52 +235,75 @@ export default function Home() {
 
         {/* Canvas pane */}
         <section className="flex min-h-0 flex-1 flex-col bg-white">
-          <div className="border-b px-4 py-2 text-sm font-medium text-slate-600">
-            Canvas — Artifacts ({artifacts.length}) · Notes ({notes.length})
+          <div className="flex gap-4 border-b px-4 text-sm font-medium">
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "workspace"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("workspace")}
+            >
+              Workspace — Artifacts ({artifacts.length}) · Notes ({notes.length})
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "profile"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("profile")}
+            >
+              Profile
+            </button>
           </div>
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-            {artifacts.length === 0 && notes.length === 0 && (
-              <p className="text-sm text-slate-400">
-                Artifacts and notes the agent saves will appear here.
-              </p>
-            )}
-            {artifacts.map((a) => (
-              <article key={`a-${a.id}`} className="rounded border bg-slate-50 p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-semibold">{a.title}</h3>
-                  <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
-                    {a.kind} v{a.version}
-                  </span>
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${BADGE[a.review_status]}`}
-                  >
-                    {a.review_status.replace("_", " ")}
-                  </span>
-                  {(["docx", "pdf"] as const).map((fmt) => (
-                    <button
-                      key={fmt}
-                      className="rounded border px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200"
-                      onClick={() => doExport(a.id, fmt)}
-                    >
-                      {fmt}
-                    </button>
-                  ))}
-                </div>
-                {a.provenance && (
-                  <p className="mt-0.5 text-[11px] text-slate-400">{a.provenance}</p>
-                )}
-                <p className="mt-1 max-h-40 overflow-hidden whitespace-pre-wrap text-sm text-slate-700">
-                  {a.body}
+          {canvasTab === "profile" ? (
+            <ProfileTab />
+          ) : (
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+              {artifacts.length === 0 && notes.length === 0 && (
+                <p className="text-sm text-slate-400">
+                  Artifacts and notes the agent saves will appear here.
                 </p>
-              </article>
-            ))}
-            {notes.map((n) => (
-              <article key={`n-${n.id}`} className="rounded border bg-slate-50 p-3">
-                <h3 className="text-sm font-semibold">{n.title}</h3>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{n.body}</p>
-              </article>
-            ))}
-          </div>
+              )}
+              {artifacts.map((a) => (
+                <article key={`a-${a.id}`} className="rounded border bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold">{a.title}</h3>
+                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                      {a.kind} v{a.version}
+                    </span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${BADGE[a.review_status]}`}
+                    >
+                      {a.review_status.replace("_", " ")}
+                    </span>
+                    {(["docx", "pdf"] as const).map((fmt) => (
+                      <button
+                        key={fmt}
+                        className="rounded border px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200"
+                        onClick={() => doExport(a.id, fmt)}
+                      >
+                        {fmt}
+                      </button>
+                    ))}
+                  </div>
+                  {a.provenance && (
+                    <p className="mt-0.5 text-[11px] text-slate-400">{a.provenance}</p>
+                  )}
+                  <p className="mt-1 max-h-40 overflow-hidden whitespace-pre-wrap text-sm text-slate-700">
+                    {a.body}
+                  </p>
+                </article>
+              ))}
+              {notes.map((n) => (
+                <article key={`n-${n.id}`} className="rounded border bg-slate-50 p-3">
+                  <h3 className="text-sm font-semibold">{n.title}</h3>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{n.body}</p>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
