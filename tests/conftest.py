@@ -35,14 +35,32 @@ def client() -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def _clear_corpus():
+def _clear_db():
+    """Wipe per-test data: corpus, grounding, and the opportunity domain.
+
+    Children before parents (FK order). Runs/Events/Notes/Settings are left
+    alone — append-only logs and config that tests scope by id/key.
+    """
     from sqlmodel import Session, delete
 
     from app.db import engine
-    from app.models import Chunk, Document, Profile
+    from app.models import (
+        Action,
+        Artifact,
+        Chunk,
+        Contact,
+        Decision,
+        Document,
+        GroundingReport,
+        Opportunity,
+        Profile,
+    )
 
     with Session(engine) as s:
-        for model in (Chunk, Document, Profile):
+        for model in (
+            GroundingReport, Artifact, Action, Decision, Contact,
+            Opportunity, Chunk, Document, Profile,
+        ):
             s.exec(delete(model))
         s.commit()
     yield
