@@ -88,3 +88,8 @@ def test_sanitize_filename():
     f = export_service.sanitize_filename
     assert f("CV — Acme/AI: Staff\nEng", "docx", 3) == "CV — Acme_AI_ Staff Eng v3.docx"
     assert f("", "pdf", 1) == "artifact v1.pdf"
+
+
+def test_sanitize_filename_caps_length():
+    name = export_service.sanitize_filename("x" * 300, "docx", 1)
+    assert len(name) <= 132  # 120 title chars + " v1.docx"

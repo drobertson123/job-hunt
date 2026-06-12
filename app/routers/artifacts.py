@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app import corpus_service, grounding_service, services
+from app import corpus_service, export_service, grounding_service, services
+from app.config import get_config
 from app.db import get_session
-from app.models import Artifact, ArtifactKind, GroundingReport
+from app.models import Artifact, ArtifactFormat, ArtifactKind, GroundingReport
 
 router = APIRouter(prefix="/api/artifacts", tags=["artifacts"])
 
@@ -141,3 +145,70 @@ def approve(artifact_id: int, session: Session = Depends(get_session)) -> Artifa
         raise HTTPException(status_code=404, detail=str(e))
     except grounding_service.InvalidStatusTransition as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+
+# --------------------------------------------------------------------------- #
+# Slice E: docx/pdf export + export-time review gate.
+# --------------------------------------------------------------------------- #
+
+_MEDIA_TYPES = {
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "pdf": "application/pdf",
+}
+
+
+def _export_renderer():
+    """Indirection point: tests monkeypatch this to inject a fake renderer."""
+    return export_service.render_with_pandoc
+
+
+class ExportOut(BaseModel):
+    artifact_id: int
+    format: str
+    file_path: str
+    download_url: str
+
+
+@router.post("/{artifact_id}/export", response_model=ExportOut)
+def export_artifact(
+    artifact_id: int,
+    format: Literal["docx", "pdf"],
+    session: Session = Depends(get_session),
+) -> ExportOut:
+    try:
+        result = export_service.export_artifact(
+            session, artifact_id, ArtifactFormat(format), renderer=_export_renderer()
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except export_service.ExportNotAllowed as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except export_service.RendererUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except export_service.RenderFailed as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return ExportOut(
+        artifact_id=result.artifact_id,
+        format=result.format.value,
+        file_path=str(result.path),
+        download_url=result.download_url,
+    )
+
+
+@router.get("/{artifact_id}/export/{format}")
+def download_export(
+    artifact_id: int,
+    format: Literal["docx", "pdf"],
+    session: Session = Depends(get_session),
+) -> FileResponse:
+    artifact = session.get(Artifact, artifact_id)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="artifact not found")
+    path = get_config().exports_dir / f"artifact-{artifact.id}-v{artifact.version}.{format}"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="not exported yet — POST first")
+    return FileResponse(
+        path,
+        media_type=_MEDIA_TYPES[format],
+        filename=export_service.sanitize_filename(artifact.title, format, artifact.version),
+    )

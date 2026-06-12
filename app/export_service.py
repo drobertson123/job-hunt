@@ -94,6 +94,7 @@ def sanitize_filename(title: str, ext: str, version: int) -> str:
     clean = re.sub(r"[\\/:\0]", "_", title)
     clean = re.sub(r"[\r\n\t]+", " ", clean)
     clean = re.sub(r"[\x00-\x1f]", "", clean).strip() or "artifact"
+    clean = clean[:120]
     return f"{clean} v{version}.{ext}"
 
 

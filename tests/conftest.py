@@ -64,4 +64,10 @@ def _clear_db():
         ):
             s.exec(delete(model))
         s.commit()
+    # Clear any persisted export files so GET-before-POST tests don't pick up
+    # stale files from prior tests (artifact IDs reset with the DB wipe).
+    exports_dir = _TMP / "exports"
+    if exports_dir.exists():
+        for f in exports_dir.iterdir():
+            f.unlink(missing_ok=True)
     yield
