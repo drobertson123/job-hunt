@@ -52,3 +52,29 @@ def test_every_skill_declares_a_write_back_contract():
         body = (skill_dir / "SKILL.md").read_text()
         assert "## Write-back contract" in body, skill_dir.name
         assert "mcp__app__" in body, skill_dir.name
+
+
+from app import capabilities as caps  # noqa: E402
+from app.agent import runner  # noqa: E402
+from app.agent.tools import ALL_TOOL_NAMES  # noqa: E402
+from app.config import get_config  # noqa: E402
+
+
+def test_build_options_enables_career_pack(tmp_path):
+    opts = runner.build_options(model=None, cwd=tmp_path, api_key=None)
+    cfg = get_config()
+    assert cfg.career_pack_dir.is_absolute()
+    assert opts.plugins == [{"type": "local", "path": str(cfg.career_pack_dir)}]
+    assert opts.skills == caps.SKILL_NAMES
+    for name in ("Skill", "Read", "WebSearch", "WebFetch"):
+        assert name in opts.allowed_tools
+    assert all(t in opts.allowed_tools for t in ALL_TOOL_NAMES)
+    # the plugin path must point at the real pack (not depend on cwd)
+    assert (cfg.career_pack_dir / ".claude-plugin" / "plugin.json").exists()
+
+
+async def test_gate_allows_skill_tools_denies_others():
+    for allowed in ("Skill", "Read", "WebSearch", "WebFetch"):
+        assert (await runner._gate(allowed, {}, None)).behavior == "allow"
+    for forbidden in ("Bash", "Write", "Edit", "mcp__app__delete_everything"):
+        assert (await runner._gate(forbidden, {}, None)).behavior == "deny"

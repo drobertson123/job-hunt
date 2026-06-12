@@ -39,14 +39,16 @@ from app.agent.tools import (
     build_app_mcp_server,
     current_run_id,
 )
+from app.capabilities import SKILL_NAMES
 from app.config import get_config
 from app.db import engine
 from app.models import Event, EventType, Run, RunStatus
 
-# The agent may only call our in-process write-back tools. The gate below denies
-# everything else (ToolSearch, a benign discovery meta-tool, is exempt by the SDK
-# and is what lets the agent find these mcp__app__* tools).
-ALLOWED_TOOLS = list(ALL_TOOL_NAMES)
+# The agent may call our in-process write-back tools, the Skill tool (career
+# pack), Read (skills' supporting files), and web research tools. The gate
+# below denies everything else (ToolSearch, a benign discovery meta-tool, is
+# exempt by the SDK and is what lets the agent find these mcp__app__* tools).
+ALLOWED_TOOLS = [*ALL_TOOL_NAMES, "Skill", "Read", "WebSearch", "WebFetch"]
 
 
 def _utcnow() -> datetime:
@@ -85,7 +87,13 @@ def build_options(*, model: str | None, cwd: Path, api_key: str | None) -> Claud
         max_turns=cfg.agent_max_turns,
         cwd=str(cwd),
         env=env,
-        setting_sources=None,  # Phase 0: no filesystem skills yet (Phase 2)
+        # Authored skills ship as a repo-local plugin with an ABSOLUTE path —
+        # per-run cwd isolation stays intact and discovery can't silently
+        # find zero skills. `skills=` is the SDK's single enablement knob
+        # (auto-configures the Skill tool); setting_sources stays None.
+        plugins=[{"type": "local", "path": str(cfg.career_pack_dir)}],
+        skills=list(SKILL_NAMES),
+        setting_sources=None,
     )
 
 

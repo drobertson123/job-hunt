@@ -38,7 +38,7 @@ async def test_save_note_writes_correct_row():
 async def test_gate_allows_only_allowlisted_tools():
     allow = await runner._gate(SAVE_NOTE_TOOL, {}, None)
     assert allow.behavior == "allow"
-    for forbidden in ("Bash", "Write", "WebFetch", "mcp__app__delete_everything"):
+    for forbidden in ("Bash", "Write", "Edit", "mcp__app__delete_everything"):
         deny = await runner._gate(forbidden, {}, None)
         assert deny.behavior == "deny"
 
