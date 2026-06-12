@@ -38,6 +38,8 @@ class AppConfig(BaseSettings):
     # Authored-skill plugin (career pack). Absolute path — the agent session's
     # cwd is an isolated per-run dir, so discovery must NOT be cwd-relative.
     career_pack_dir: Path = ROOT_DIR / "skills" / "career-pack"
+    # Artifact exports (docx/pdf) land here; served by the download endpoint.
+    exports_dir: Path = ROOT_DIR / "data" / "exports"
 
     # --- Static frontend (built Next.js export) ---
     frontend_dir: Path = ROOT_DIR / "frontend" / "out"
@@ -77,6 +79,7 @@ class AppConfig(BaseSettings):
     def ensure_dirs(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        self.exports_dir.mkdir(parents=True, exist_ok=True)
 
 
 @lru_cache

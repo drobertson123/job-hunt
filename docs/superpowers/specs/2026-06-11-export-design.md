@@ -1,7 +1,7 @@
 # Export — docx/pdf + export-time review gate (Phase 2 slice E)
 
 **Date:** 2026-06-11
-**Status:** Approved design
+**Status:** Implemented (plan docs/superpowers/plans/2026-06-11-export.md)
 **Decided with user:** persist + download (not ephemeral); `approved` gate on
 generative kinds only; pandoc + weasyprint renderer.
 
@@ -67,8 +67,10 @@ subprocess call:
   (pandoc non-zero exit) raise `RenderFailed` (router → 500 with stderr tail).
 
 **Toolchain install is plan Task 1** (fail fast on the riskiest step):
-`uv add weasyprint` + `sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libffi-dev`
-(exact lib set verified during install), then smoke-test
+`uv add weasyprint` — **no apt packages were needed on this WSL2 box**: weasyprint
+69.0 imported cleanly with system pango/harfbuzz already present. The apt command
+(`sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libffi-dev`)
+is retained as a fallback for machines that lack these system libs. Smoke-test
 `pandoc -f markdown -o /tmp/t.pdf --pdf-engine=weasyprint` and `-t docx`.
 The Tailscale-DNS/PyPI blocker is resolved (verified 2026-06-11: public DNS
 works), so installs are unblocked.

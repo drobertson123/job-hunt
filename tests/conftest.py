@@ -15,6 +15,7 @@ from pathlib import Path
 _TMP = Path(tempfile.mkdtemp(prefix="oh-test-"))
 os.environ["OH_DATA_DIR"] = str(_TMP / "data")
 os.environ["OH_SESSIONS_DIR"] = str(_TMP / "sessions")
+os.environ["OH_EXPORTS_DIR"] = str(_TMP / "exports")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -63,4 +64,10 @@ def _clear_db():
         ):
             s.exec(delete(model))
         s.commit()
+    # Clear any persisted export files so GET-before-POST tests don't pick up
+    # stale files from prior tests (artifact IDs reset with the DB wipe).
+    exports_dir = _TMP / "exports"
+    if exports_dir.exists():
+        for f in exports_dir.iterdir():
+            f.unlink(missing_ok=True)
     yield

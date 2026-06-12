@@ -8,6 +8,7 @@ import {
   Note,
   Opportunity,
   SettingsView,
+  exportArtifact,
   fetchArtifacts,
   fetchCapabilities,
   fetchNotes,
@@ -153,6 +154,15 @@ export default function Home() {
     [input, selectedOpp, runStream],
   );
 
+  const doExport = useCallback(async (artifactId: number, format: "docx" | "pdf") => {
+    try {
+      const r = await exportArtifact(artifactId, format);
+      window.location.assign(r.download_url);
+    } catch (err) {
+      setItems((prev) => [...prev, { kind: "error", text: String(err) }]);
+    }
+  }, []);
+
   return (
     <main className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b bg-white px-4 py-3">
@@ -244,6 +254,15 @@ export default function Home() {
                   >
                     {a.review_status.replace("_", " ")}
                   </span>
+                  {(["docx", "pdf"] as const).map((fmt) => (
+                    <button
+                      key={fmt}
+                      className="rounded border px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200"
+                      onClick={() => doExport(a.id, fmt)}
+                    >
+                      {fmt}
+                    </button>
+                  ))}
                 </div>
                 {a.provenance && (
                   <p className="mt-0.5 text-[11px] text-slate-400">{a.provenance}</p>
