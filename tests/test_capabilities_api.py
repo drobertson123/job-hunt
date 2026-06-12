@@ -34,6 +34,8 @@ def test_list_capabilities(client):
     assert set(by_name) == {
         "enrich-opportunity", "company-research", "cv-tailor",
         "interview-prep", "fit-analysis",
+        "discover-opportunities", "qualify-opportunity",
+        "analyze-opportunity", "draft-pursuit",
     }
     assert by_name["fit-analysis"]["requires_opportunity"] is True
     assert by_name["enrich-opportunity"]["requires_input"] is True

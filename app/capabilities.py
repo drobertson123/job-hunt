@@ -1,4 +1,4 @@
-"""Capability registry — named, templated invocations of career-pack skills.
+"""Capability registry — named, templated invocations of authored-pack skills.
 
 A capability wraps ONE authored skill in a deterministic prompt: the UI (or
 any client) POSTs /api/capabilities/{name} and the backend builds the exact
@@ -14,7 +14,8 @@ from dataclasses import dataclass
 
 from app.models import Opportunity, Profile
 
-PLUGIN_NAME = "career-pack"
+CAREER_PLUGIN = "career-pack"
+BUSINESS_PLUGIN = "business-pack"
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class Capability:
     requires_opportunity: bool
     requires_input: bool
     include_profile: bool  # inline the synthesized Profile row into the prompt
+    plugin: str  # which authored pack ships the skill (qualified name prefix)
 
 
 CAPABILITIES = [
@@ -37,6 +39,7 @@ CAPABILITIES = [
         requires_opportunity=False,
         requires_input=True,
         include_profile=False,
+        plugin=CAREER_PLUGIN,
     ),
     Capability(
         name="company-research",
@@ -46,6 +49,7 @@ CAPABILITIES = [
         requires_opportunity=True,
         requires_input=False,
         include_profile=False,
+        plugin=CAREER_PLUGIN,
     ),
     Capability(
         name="cv-tailor",
@@ -55,6 +59,7 @@ CAPABILITIES = [
         requires_opportunity=True,
         requires_input=False,
         include_profile=True,
+        plugin=CAREER_PLUGIN,
     ),
     Capability(
         name="interview-prep",
@@ -64,6 +69,7 @@ CAPABILITIES = [
         requires_opportunity=True,
         requires_input=False,
         include_profile=True,
+        plugin=CAREER_PLUGIN,
     ),
     Capability(
         name="fit-analysis",
@@ -73,13 +79,54 @@ CAPABILITIES = [
         requires_opportunity=True,
         requires_input=False,
         include_profile=True,
+        plugin=CAREER_PLUGIN,
+    ),
+    Capability(
+        name="discover-opportunities",
+        skill="discover-opportunities",
+        label="Discover",
+        description="Web sweep for business opportunities (RFPs, grants, leads) matching your profile.",
+        requires_opportunity=False,
+        requires_input=False,
+        include_profile=True,
+        plugin=BUSINESS_PLUGIN,
+    ),
+    Capability(
+        name="qualify-opportunity",
+        skill="qualify-opportunity",
+        label="Qualify",
+        description="Qualify a business opportunity: move its stage with evidence and record the decision.",
+        requires_opportunity=True,
+        requires_input=False,
+        include_profile=True,
+        plugin=BUSINESS_PLUGIN,
+    ),
+    Capability(
+        name="analyze-opportunity",
+        skill="analyze-opportunity",
+        label="Analyze",
+        description="Decision-grade analysis brief: market, competition, effort vs value, risks.",
+        requires_opportunity=True,
+        requires_input=False,
+        include_profile=False,
+        plugin=BUSINESS_PLUGIN,
+    ),
+    Capability(
+        name="draft-pursuit",
+        skill="draft-pursuit",
+        label="Draft pursuit",
+        description="Corpus-grounded outreach message or proposal for a business opportunity.",
+        requires_opportunity=True,
+        requires_input=False,
+        include_profile=True,
+        plugin=BUSINESS_PLUGIN,
     ),
 ]
 
 REGISTRY: dict[str, Capability] = {c.name: c for c in CAPABILITIES}
 
 # Plugin-qualified names for ClaudeAgentOptions.skills.
-SKILL_NAMES = [f"{PLUGIN_NAME}:{c.skill}" for c in CAPABILITIES]
+SKILL_NAMES = [f"{c.plugin}:{c.skill}" for c in CAPABILITIES]
 
 
 def opportunity_block(opp: Opportunity) -> str:
@@ -125,7 +172,7 @@ def build_prompt(
     profile: Profile | None = None,
 ) -> str:
     parts = [
-        f'Use the "{PLUGIN_NAME}:{cap.skill}" skill now (via the Skill tool), '
+        f'Use the "{cap.plugin}:{cap.skill}" skill now (via the Skill tool), '
         "then follow its write-back contract exactly."
     ]
     if opportunity is not None:
