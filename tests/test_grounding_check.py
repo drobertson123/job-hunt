@@ -75,3 +75,26 @@ def test_no_checkable_sentences_yields_empty_findings():
     assert result.findings == []
     assert result.checked_count == 0
     assert result.unsupported_count == 0
+
+
+def test_provenance_picks_correct_document_across_multiple_docs():
+    with Session(engine) as s:
+        ingest_document(
+            s, title="python.md", source_kind=DocumentSource.paste,
+            media_type=DocumentMediaType.md,
+            data=b"python python python apis apis python everywhere in this text",
+            embedder=_lexical_embedder,
+        )
+        ingest_document(
+            s, title="k8s.md", source_kind=DocumentSource.paste,
+            media_type=DocumentMediaType.md,
+            data=b"kubernetes kubernetes clusters kubernetes operations every day",
+            embedder=_lexical_embedder,
+        )
+        result = check_grounding(
+            s, "I run kubernetes clusters at scale.",
+            embedder=_lexical_embedder, threshold=0.4,
+        )
+    finding = result.findings[0]
+    assert finding.supported is True
+    assert finding.document_title == "k8s.md"  # not python.md
