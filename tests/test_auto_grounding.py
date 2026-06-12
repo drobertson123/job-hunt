@@ -115,3 +115,30 @@ def test_one_failure_does_not_stop_other_checks(fake_auto_embedder, monkeypatch)
     with Session(engine) as s:
         assert s.get(Artifact, aid_bad).review_status == ReviewStatus.draft
         assert s.get(Artifact, aid_good).review_status == ReviewStatus.needs_review
+
+
+from claude_agent_sdk import ResultMessage  # noqa: E402
+
+
+def _fake_agent():
+    async def fake(*, prompt, options):  # noqa: ARG001
+        yield ResultMessage(
+            subtype="success", duration_ms=1, duration_api_ms=1, is_error=False,
+            num_turns=1, session_id="sess", result="ok", total_cost_usd=0.0,
+        )
+
+    return fake
+
+
+async def test_stream_run_auto_grounds_on_completion(fake_auto_embedder):
+    _seed_corpus()
+    run = runner.create_run("tailor my cv", model=None)
+    # Simulates the artifact a skill saved mid-run (attributed via run_id).
+    aid = _make_artifact(ArtifactKind.cv, run.id)
+    events = [
+        e async for e in runner.stream_run("tailor my cv", run=run, query_fn=_fake_agent())
+    ]
+    assert events[-1]["type"] == "status"
+    assert events[-1]["content"] == "completed"
+    with Session(engine) as s:
+        assert s.get(Artifact, aid).review_status == ReviewStatus.needs_review

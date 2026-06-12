@@ -14,6 +14,7 @@ Design notes (Phase 0):
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
@@ -39,6 +40,7 @@ from app.agent.tools import (
     build_app_mcp_server,
     current_run_id,
 )
+from app import grounding_service
 from app.capabilities import SKILL_NAMES
 from app.config import get_config
 from app.db import engine
@@ -188,6 +190,11 @@ async def stream_run(
                 }
                 yield emit(EventType.result, json.dumps(payload))
                 break  # one-shot: stop after the turn completes (streaming-input mode)
+        # Review gate: auto-check generative artifacts created by this run
+        # (best-effort; never fails the run). to_thread because the embedder
+        # is a blocking network call. Applies to chat AND capability runs so
+        # the gate can't be bypassed by phrasing.
+        await asyncio.to_thread(grounding_service.auto_ground_run_artifacts, run_id)
         _set_run_status(run_id, RunStatus.completed)
         yield emit(EventType.status, RunStatus.completed.value)
     except Exception as exc:  # noqa: BLE001 - surface any failure as an event
