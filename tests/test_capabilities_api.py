@@ -118,3 +118,56 @@ def test_invoke_with_real_runner_persists_replayable_events(client, monkeypatch)
     events = runner_mod.events_after(run_id)
     assert [e["type"] for e in events] == ["status", "result", "status"]
     assert events[-1]["content"] == "completed"
+
+
+def _seed_business_opportunity() -> str:
+    with Session(engine) as s:
+        opp = services.upsert_opportunity(
+            s, type=OpportunityType.business, title="ML tooling grant",
+            dedupe_key="cap-biz-test", organization="GrantCo", url=None,
+            location=None, summary="Grant for ML developer tooling.",
+            source="discovery",
+            details={"opportunity_kind": "grant", "deadline": "2026-07-01"},
+        )
+        return opp.id
+
+
+def test_list_includes_business_capabilities(client):
+    names = {c["name"] for c in client.get("/api/capabilities").json()}
+    assert {
+        "discover-opportunities", "qualify-opportunity",
+        "analyze-opportunity", "draft-pursuit",
+    } <= names
+    assert len(names) == 9
+
+
+def test_qualify_requires_opportunity_422(client):
+    r = client.post("/api/capabilities/qualify-opportunity", json={})
+    assert r.status_code == 422
+
+
+def test_discover_invokes_without_opportunity(client, monkeypatch):
+    captured: dict = {}
+    monkeypatch.setattr(
+        "app.routers.capabilities.stream_run", _fake_stream(captured)
+    )
+    r = client.post("/api/capabilities/discover-opportunities", json={"input": "grants for ML tooling"})
+    assert r.status_code == 200
+    assert "business-pack:discover-opportunities" in captured["prompt"]
+    assert "grants for ML tooling" in captured["prompt"]
+    assert "Candidate profile" in captured["prompt"]  # include_profile
+
+
+def test_invoke_qualify_templates_business_skill(client, monkeypatch):
+    captured: dict = {}
+    monkeypatch.setattr(
+        "app.routers.capabilities.stream_run", _fake_stream(captured)
+    )
+    opp_id = _seed_business_opportunity()
+    r = client.post(
+        "/api/capabilities/qualify-opportunity", json={"opportunity_id": opp_id}
+    )
+    assert r.status_code == 200
+    assert "business-pack:qualify-opportunity" in captured["prompt"]
+    assert opp_id in captured["prompt"]
+    assert '"opportunity_kind": "grant"' in captured["prompt"]
