@@ -14,6 +14,7 @@ surfaces low-support spans, not a truth oracle. The human approval step
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from dataclasses import asdict, dataclass
 
@@ -21,9 +22,11 @@ import numpy as np
 from sqlmodel import Session, select
 
 from app.config import get_config
-from app.corpus_service import Embedder
+from app.corpus_service import Embedder, default_embedder
+from app.db import engine
 from app.models import (
     Artifact,
+    ArtifactKind,
     Chunk,
     Document,
     GroundingReport,
@@ -237,3 +240,54 @@ def approve_artifact(session: Session, artifact_id: int) -> Artifact:
     session.commit()
     session.refresh(artifact)
     return artifact
+
+
+# --------------------------------------------------------------------------- #
+# Slice A+D: post-run auto-grounding of generative artifacts.
+# --------------------------------------------------------------------------- #
+
+logger = logging.getLogger(__name__)
+
+# Kinds that assert facts about the user — auto-checked after every run.
+# Research briefs / fit analyses are about the opportunity, not the corpus,
+# so checking them would only produce noise (spec decision).
+GENERATIVE_KINDS = (
+    ArtifactKind.cv,
+    ArtifactKind.cover_letter,
+    ArtifactKind.pitch,
+    ArtifactKind.outreach,
+)
+
+
+def _auto_embedder(session: Session) -> Embedder:
+    """Indirection point: tests monkeypatch this to inject a fake embedder."""
+    return default_embedder(session)
+
+
+def auto_ground_run_artifacts(run_id: str) -> list[int]:
+    """Best-effort grounding for generative artifacts created by a run.
+
+    Failures (no OpenAI key, empty corpus) are logged and skipped — the run
+    must still succeed; an unchecked artifact simply stays `draft`. Returns
+    the artifact ids that were checked.
+    """
+    with Session(engine) as session:
+        ids = list(
+            session.exec(
+                select(Artifact.id)
+                .where(Artifact.run_id == run_id)
+                .where(Artifact.kind.in_(GENERATIVE_KINDS))
+                .order_by(Artifact.id)
+            ).all()
+        )
+    checked: list[int] = []
+    for artifact_id in ids:
+        try:
+            with Session(engine) as session:
+                run_grounding_check(
+                    session, artifact_id, embedder=_auto_embedder(session)
+                )
+            checked.append(artifact_id)
+        except Exception as exc:  # noqa: BLE001 — never fail the run
+            logger.warning("auto-grounding skipped for artifact %s: %s", artifact_id, exc)
+    return checked
