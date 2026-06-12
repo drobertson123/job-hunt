@@ -1,0 +1,20 @@
+/* Print stylesheet for PDF export (pandoc --pdf-engine=weasyprint). */
+@page {
+  size: A4;
+  margin: 2cm 2.2cm;
+}
+body {
+  font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #111;
+}
+h1 { font-size: 17pt; margin: 0 0 0.4em; }
+h2 { font-size: 13pt; margin: 1.1em 0 0.35em; border-bottom: 1px solid #999; }
+h3 { font-size: 11.5pt; margin: 0.9em 0 0.3em; }
+ul, ol { margin: 0.3em 0 0.7em; padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+table { border-collapse: collapse; margin: 0.6em 0; width: 100%; }
+th, td { border: 1px solid #bbb; padding: 0.25em 0.5em; text-align: left; }
+th { background: #f0f0f0; }
+code { font-family: "DejaVu Sans Mono", monospace; font-size: 9.5pt; }
