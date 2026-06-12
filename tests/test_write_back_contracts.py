@@ -12,6 +12,7 @@ from app.agent.tools import (
     record_decision,
     save_artifact,
     save_opportunity,
+    update_pipeline_status,
 )
 from app.db import engine
 from app.models import (
@@ -22,6 +23,8 @@ from app.models import (
     Decision,
     DecisionKind,
     Opportunity,
+    OpportunityType,
+    PipelineStage,
     ReviewStatus,
 )
 
@@ -134,3 +137,69 @@ async def test_fit_analysis_contract_artifact_plus_decision(run_ctx):
         assert decision.kind == DecisionKind.choice
         assert decision.summary.startswith("Fit 4.2/5")
         assert decision.rationale
+
+
+async def test_discover_contract_rows_and_dedupe(run_ctx):
+    for suffix in ("a", "b"):
+        await save_opportunity.handler({
+            "type": "business",
+            "title": f"Grant {suffix}",
+            "organization": "GrantCo",
+            "url": f"https://grants.example/{suffix}",
+            "summary": "Matches profile: ML platform work.",
+            "source": "discovery",
+            "dedupe_key": f"https://grants.example/{suffix}",
+            "details": {"opportunity_kind": "grant", "deadline": "2026-07-01"},
+        })
+    await record_action.handler({
+        "title": "Triage discovered opportunities", "kind": "research",
+    })
+    with Session(engine) as s:
+        rows = s.exec(select(Opportunity)).all()
+        assert len(rows) == 2
+        for r in rows:
+            assert r.type == OpportunityType.business
+            assert r.source == "discovery"
+            assert r.details["opportunity_kind"] == "grant"
+        action = s.exec(select(Action)).one()
+        assert action.kind == ActionKind.research
+
+    # dedupe: re-saving the same URL updates, never duplicates
+    await save_opportunity.handler({
+        "type": "business", "title": "Grant a",
+        "dedupe_key": "https://grants.example/a", "summary": "updated",
+    })
+    with Session(engine) as s:
+        rows = s.exec(select(Opportunity)).all()
+        assert len(rows) == 2
+        assert {r.summary for r in rows} == {"updated", "Matches profile: ML platform work."}
+
+
+async def test_qualify_contract_stage_and_decision(run_ctx):
+    await save_opportunity.handler({
+        "type": "business", "title": "ML Grant", "dedupe_key": "qualify-1",
+    })
+    with Session(engine) as s:
+        opp_id = s.exec(select(Opportunity)).one().id
+
+    await update_pipeline_status.handler({
+        "opportunity_id": opp_id,
+        "stage": "analyzing",
+        "rationale": "Strong capability fit; deadline feasible.",
+    })
+    await record_decision.handler({
+        "summary": "Qualified ML Grant: analyze further",
+        "kind": "choice",
+        "opportunity_id": opp_id,
+        "rationale": "Fit + value; low competition signal.",
+    })
+    with Session(engine) as s:
+        assert s.get(Opportunity, opp_id).stage == PipelineStage.analyzing
+        decisions = s.exec(
+            select(Decision).where(Decision.opportunity_id == opp_id)
+        ).all()
+        # update_pipeline_status may log its own stage_change decision;
+        # the contract's choice row must exist with a rationale.
+        assert any(
+            d.kind == DecisionKind.choice and d.rationale for d in decisions
+        )
