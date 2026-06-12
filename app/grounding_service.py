@@ -86,3 +86,78 @@ def _emit(spans: list[Span], start: int, piece: str) -> None:
     lead = len(piece) - len(piece.lstrip())
     s = start + lead
     spans.append(Span(text=stripped, start=s, end=s + len(stripped)))
+
+
+@dataclass
+class SentenceFinding:
+    """One scored sentence; persisted as a dict in GroundingReport.findings."""
+
+    text: str
+    start: int
+    end: int
+    score: float
+    chunk_id: int | None
+    document_title: str | None
+    supported: bool
+
+
+@dataclass
+class GroundingResult:
+    findings: list[SentenceFinding]
+    threshold: float
+    embedding_model: str
+
+    @property
+    def checked_count(self) -> int:
+        return len(self.findings)
+
+    @property
+    def unsupported_count(self) -> int:
+        return sum(1 for f in self.findings if not f.supported)
+
+
+def check_grounding(
+    session: Session,
+    text: str,
+    *,
+    embedder: Embedder,
+    threshold: float | None = None,
+) -> GroundingResult:
+    """Score every sentence of `text` against the corpus by best cosine match.
+
+    Raises ValueError on an empty corpus: checking against nothing would mark
+    everything [MISSING], which is misleading rather than safe.
+
+    Same single-embedding-model assumption as corpus_service.search(): all
+    stored chunk vectors share one dimension.
+    """
+    if threshold is None:
+        threshold = get_config().grounding_min_similarity
+    rows = session.exec(select(Chunk)).all()
+    if not rows:
+        raise ValueError("corpus is empty — ingest documents before running a grounding check")
+
+    model = rows[0].embedding_model
+    spans = split_sentences(text)
+    if not spans:
+        return GroundingResult(findings=[], threshold=threshold, embedding_model=model)
+
+    smat = np.asarray(embedder([s.text for s in spans]), dtype=np.float32)
+    cmat = np.vstack([np.frombuffer(r.embedding, dtype=np.float32) for r in rows])
+    sn = smat / (np.linalg.norm(smat, axis=1, keepdims=True) + 1e-12)
+    cn = cmat / (np.linalg.norm(cmat, axis=1, keepdims=True) + 1e-12)
+    scores = sn @ cn.T  # (n_sentences, n_chunks)
+    best = np.argmax(scores, axis=1)
+
+    titles = {d.id: d.title for d in session.exec(select(Document)).all()}
+    findings: list[SentenceFinding] = []
+    for i, span in enumerate(spans):
+        ci = int(best[i])
+        score = float(scores[i, ci])
+        chunk = rows[ci]
+        findings.append(SentenceFinding(
+            text=span.text, start=span.start, end=span.end, score=score,
+            chunk_id=chunk.id, document_title=titles.get(chunk.document_id),
+            supported=score >= threshold,
+        ))
+    return GroundingResult(findings=findings, threshold=threshold, embedding_model=model)
