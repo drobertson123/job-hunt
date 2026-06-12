@@ -17,11 +17,22 @@ engine = create_engine(
 )
 
 
+def _ensure_column(target_engine, table: str, column: str, ddl: str) -> None:
+    """Idempotent ALTER TABLE guard: create_all never adds columns to existing tables."""
+    with target_engine.connect() as conn:
+        cols = [row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")]
+        if column not in cols:
+            conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+            conn.commit()
+
+
 def init_db() -> None:
     """Create tables. Import models for side-effect registration first."""
     from app import models  # noqa: F401  (registers tables on SQLModel.metadata)
 
     SQLModel.metadata.create_all(engine)
+    # Slice C: pre-existing DBs have artifacts without review_status.
+    _ensure_column(engine, "artifacts", "review_status", "VARCHAR DEFAULT 'draft'")
 
 
 def get_session() -> Iterator[Session]:

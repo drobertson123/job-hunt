@@ -12,7 +12,8 @@ Deliberately minimal — just what the vertical slice needs:
 Later phases add: opportunities, actions, artifacts, decisions, contacts,
 saved_queries.
 
-Phase 2 adds: corpus_documents, corpus_chunks, profile.
+Phase 2 adds: corpus_documents, corpus_chunks, profile, grounding_reports
+(+ Artifact.review_status).
 """
 
 from __future__ import annotations
@@ -209,6 +210,14 @@ class ArtifactFormat(str, Enum):
     pdf = "pdf"
 
 
+class ReviewStatus(str, Enum):
+    """Review-before-send gate: grounding check -> needs_review -> human approval."""
+
+    draft = "draft"
+    needs_review = "needs_review"
+    approved = "approved"
+
+
 class Artifact(SQLModel, table=True):
     __tablename__ = "artifacts"
 
@@ -223,6 +232,7 @@ class Artifact(SQLModel, table=True):
     file_path: str | None = None
     provenance: str | None = None  # which skill/source produced it
     version: int = 1
+    review_status: ReviewStatus = Field(default=ReviewStatus.draft, index=True)
     run_id: str | None = Field(default=None, foreign_key="runs.id", index=True)
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
@@ -318,3 +328,31 @@ class Profile(SQLModel, table=True):
     locations: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     source_doc_count: int = 0
     synthesized_at: datetime = Field(default_factory=_utcnow)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2 slice C: grounding reports (anti-fabrication verifier output).
+# --------------------------------------------------------------------------- #
+
+
+class GroundingReport(SQLModel, table=True):
+    """One current grounding report per artifact (replaced on re-check).
+
+    `body_hash` is sha256 of the artifact body that was checked; a mismatch vs
+    the current body means the report is stale. Annotated text is derived from
+    body + findings offsets, never stored.
+    """
+
+    __tablename__ = "grounding_reports"
+
+    id: int | None = Field(default=None, primary_key=True)
+    artifact_id: int = Field(foreign_key="artifacts.id", index=True, unique=True)
+    body_hash: str
+    threshold: float
+    embedding_model: str = ""
+    # Per sentence: {text, start, end, score, chunk_id|None,
+    #               document_title|None, supported}
+    findings: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    checked_count: int = 0
+    unsupported_count: int = 0
+    created_at: datetime = Field(default_factory=_utcnow)

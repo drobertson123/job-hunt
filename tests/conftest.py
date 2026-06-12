@@ -39,10 +39,11 @@ def _clear_corpus():
     from sqlmodel import Session, delete
 
     from app.db import engine
-    from app.models import Chunk, Document, Profile
+    from app.models import Artifact, Chunk, Document, GroundingReport, Profile
 
     with Session(engine) as s:
-        for model in (Chunk, Document, Profile):
+        # GroundingReport before Artifact (FK); corpus tables independent.
+        for model in (GroundingReport, Artifact, Chunk, Document, Profile):
             s.exec(delete(model))
         s.commit()
     yield
