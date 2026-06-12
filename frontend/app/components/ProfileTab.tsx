@@ -84,7 +84,7 @@ export default function ProfileTab() {
           Corpus documents ({docs.length})
         </h3>
         <div className="mt-2 space-y-2">
-          {loaded && docs.length === 0 && (
+          {loaded && !error && docs.length === 0 && (
             <p className="text-sm text-slate-400">
               No documents yet — upload your resume to get started.
             </p>
@@ -122,7 +122,7 @@ export default function ProfileTab() {
           {profile ? (
             <ProfileCard profile={profile} />
           ) : (
-            loaded && (
+            loaded && !error && (
               <p className="text-sm text-slate-400">
                 No profile yet — add documents, then synthesize.
               </p>
@@ -168,7 +168,7 @@ function AddDocuments({
   onPaste,
 }: {
   busy: boolean;
-  onUpload: (f: File) => void;
+  onUpload: (f: File) => Promise<boolean>;
   onPaste: (title: string, text: string) => Promise<boolean>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -195,7 +195,7 @@ function AddDocuments({
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) onUpload(f);
+            if (f) void onUpload(f);
             e.target.value = ""; // allow re-selecting the same file
           }}
         />
@@ -250,9 +250,9 @@ function ProfileCard({ profile }: { profile: Profile }) {
       )}
       {profile.skills.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {profile.skills.map((s) => (
+          {profile.skills.map((s, i) => (
             <span
-              key={s}
+              key={`${s}-${i}`}
               className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
             >
               {s}
@@ -329,8 +329,8 @@ function ListSection({ label, items }: { label: string; items: string[] }) {
     <div className="mt-3">
       <h5 className="text-xs font-semibold uppercase text-slate-500">{label}</h5>
       <ul className="mt-1 list-inside list-disc text-sm text-slate-700">
-        {items.map((it) => (
-          <li key={it}>{it}</li>
+        {items.map((it, i) => (
+          <li key={`${it}-${i}`}>{it}</li>
         ))}
       </ul>
     </div>
