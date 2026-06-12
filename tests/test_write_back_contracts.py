@@ -172,7 +172,9 @@ async def test_discover_contract_rows_and_dedupe(run_ctx):
     with Session(engine) as s:
         rows = s.exec(select(Opportunity)).all()
         assert len(rows) == 2
-        assert {r.summary for r in rows} == {"updated", "Matches profile: ML platform work."}
+        by_key = {r.dedupe_key: r.summary for r in rows}
+        assert by_key["https://grants.example/a"] == "updated"
+        assert by_key["https://grants.example/b"] == "Matches profile: ML platform work."
 
 
 async def test_qualify_contract_stage_and_decision(run_ctx):
