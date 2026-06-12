@@ -60,17 +60,23 @@ from app.agent.tools import ALL_TOOL_NAMES  # noqa: E402
 from app.config import get_config  # noqa: E402
 
 
-def test_build_options_enables_career_pack(tmp_path):
+def test_build_options_enables_both_packs(tmp_path):
     opts = runner.build_options(model=None, cwd=tmp_path, api_key=None)
     cfg = get_config()
     assert cfg.career_pack_dir.is_absolute()
-    assert opts.plugins == [{"type": "local", "path": str(cfg.career_pack_dir)}]
+    assert cfg.business_pack_dir.is_absolute()
+    assert opts.plugins == [
+        {"type": "local", "path": str(cfg.career_pack_dir)},
+        {"type": "local", "path": str(cfg.business_pack_dir)},
+    ]
     assert opts.skills == caps.SKILL_NAMES
+    assert len(opts.skills) == 9
     for name in ("Skill", "WebSearch", "WebFetch"):
         assert name in opts.allowed_tools
     assert all(t in opts.allowed_tools for t in ALL_TOOL_NAMES)
-    # the plugin path must point at the real pack (not depend on cwd)
+    # both plugin paths must point at real packs (not depend on cwd)
     assert (cfg.career_pack_dir / ".claude-plugin" / "plugin.json").exists()
+    assert (cfg.business_pack_dir / ".claude-plugin" / "plugin.json").exists()
 
 
 async def test_gate_allows_skill_tools_denies_others():

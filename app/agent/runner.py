@@ -95,11 +95,14 @@ def build_options(*, model: str | None, cwd: Path, api_key: str | None) -> Claud
         max_turns=cfg.agent_max_turns,
         cwd=str(cwd),
         env=env,
-        # Authored skills ship as a repo-local plugin with an ABSOLUTE path —
+        # Authored skills ship as repo-local plugins with ABSOLUTE paths —
         # per-run cwd isolation stays intact and discovery can't silently
         # find zero skills. `skills=` is the SDK's single enablement knob
         # (auto-configures the Skill tool); setting_sources stays None.
-        plugins=[{"type": "local", "path": str(cfg.career_pack_dir)}],
+        plugins=[
+            {"type": "local", "path": str(p)}
+            for p in (cfg.career_pack_dir, cfg.business_pack_dir)
+        ],
         skills=list(SKILL_NAMES),
         setting_sources=None,
     )

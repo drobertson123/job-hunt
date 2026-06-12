@@ -1,4 +1,4 @@
-"""Capability endpoints — templated invocations of career-pack skills.
+"""Capability endpoints — templated invocations of authored-pack skills.
 
 POST /api/capabilities/{name} builds the deterministic prompt from the
 registry (app.capabilities) and streams an ordinary agent run as SSE — the

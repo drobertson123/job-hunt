@@ -38,6 +38,7 @@ class AppConfig(BaseSettings):
     # Authored-skill plugin (career pack). Absolute path — the agent session's
     # cwd is an isolated per-run dir, so discovery must NOT be cwd-relative.
     career_pack_dir: Path = ROOT_DIR / "skills" / "career-pack"
+    business_pack_dir: Path = ROOT_DIR / "skills" / "business-pack"
     # Artifact exports (docx/pdf) land here; served by the download endpoint.
     exports_dir: Path = ROOT_DIR / "data" / "exports"
 
