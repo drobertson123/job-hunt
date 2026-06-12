@@ -345,16 +345,19 @@ function SettingsBadge({
 }) {
   const [open, setOpen] = useState(false);
   const [key, setKey] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
   const [model, setModel] = useState("");
   const configured = settings?.anthropic_key_configured;
 
   const save = async () => {
     const body: Record<string, string> = {};
     if (key.trim()) body.anthropic_api_key = key.trim();
+    if (openaiKey.trim()) body.openai_api_key = openaiKey.trim();
     if (model.trim()) body.agent_model = model.trim();
     const updated = await updateSettings(body);
     onSaved(updated);
     setKey("");
+    setOpenaiKey("");
     setOpen(false);
   };
 
@@ -377,6 +380,16 @@ function SettingsBadge({
             placeholder={configured ? "••••• (set)" : "sk-ant-…"}
             value={key}
             onChange={(e) => setKey(e.target.value)}
+          />
+          <label className="block text-xs font-medium text-slate-600">
+            OpenAI API key (embeddings)
+          </label>
+          <input
+            type="password"
+            className="w-full rounded border px-2 py-1 text-sm"
+            placeholder={settings?.openai_key_configured ? "••••• (set)" : "sk-…"}
+            value={openaiKey}
+            onChange={(e) => setOpenaiKey(e.target.value)}
           />
           <label className="block text-xs font-medium text-slate-600">Agent model</label>
           <input
