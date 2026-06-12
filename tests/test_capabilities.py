@@ -36,6 +36,7 @@ def test_build_prompt_includes_opportunity_and_profile():
         type=OpportunityType.job, title="Staff ML Engineer",
         organization="Acme AI", summary="PyTorch platform team",
         dedupe_key="acme|staff-ml",
+        details={"skills": ["pytorch"], "seniority": "staff"},
     )
     profile = Profile(headline="Staff ML engineer", skills=["pytorch", "k8s"])
     prompt = caps.build_prompt(cap, opportunity=opp, profile=profile)
@@ -44,6 +45,7 @@ def test_build_prompt_includes_opportunity_and_profile():
     assert "Staff ML Engineer" in prompt and "Acme AI" in prompt
     assert "- dedupe_key: acme|staff-ml" in prompt
     assert "pytorch" in prompt
+    assert '- details: {"seniority": "staff", "skills": ["pytorch"]}' in prompt
 
 
 def test_build_prompt_profile_placeholder_when_missing():

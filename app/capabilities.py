@@ -9,6 +9,7 @@ naturally — the registry is the reliable path, not the only one.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from app.models import Opportunity, Profile
@@ -94,13 +95,14 @@ def opportunity_block(opp: Opportunity) -> str:
     if opp.dedupe_key:
         lines.append(f"- dedupe_key: {opp.dedupe_key}")
     if opp.details:
-        lines.append(f"- details: {opp.details}")
+        lines.append(f"- details: {json.dumps(opp.details, sort_keys=True)}")
     return "\n".join(lines)
 
 
 def profile_block(profile: Profile | None) -> str:
     if profile is None:
         return "- (no synthesized profile — use mcp__app__search_corpus instead)"
+    # experience/achievements deliberately omitted: STAR stories and bullets come from corpus search per the skills' grounding rules; inlining them would bloat every prompt.
     lines = []
     if profile.headline:
         lines.append(f"- headline: {profile.headline}")

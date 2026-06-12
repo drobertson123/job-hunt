@@ -1,7 +1,7 @@
 # Career Pack — Authored-Skill Seam + Capabilities (Phase 2 slices A+D merged)
 
 **Date:** 2026-06-11
-**Status:** Approved design
+**Status:** Implemented (plan docs/superpowers/plans/2026-06-11-career-pack.md); live seam gate PASSED 2026-06-11 (real CLI discovered the plugin and followed the fit-analysis write-back contract, 56s)
 **Decided with user:** full career pack (A absorbs D), chat + capability endpoint
 invocation, auto-grounding on generative kinds, local-plugin packaging.
 
