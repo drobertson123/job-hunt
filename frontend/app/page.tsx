@@ -8,7 +8,6 @@ import {
   Note,
   Opportunity,
   SettingsView,
-  exportArtifact,
   fetchArtifacts,
   fetchCapabilities,
   fetchNotes,
@@ -19,18 +18,13 @@ import {
   updateSettings,
 } from "@/lib/api";
 import ProfileTab from "./components/ProfileTab";
+import ArtifactCard from "./components/ArtifactCard";
 
 type ChatItem =
   | { kind: "user"; text: string }
   | { kind: "assistant"; text: string }
   | { kind: "tool"; text: string }
   | { kind: "error"; text: string };
-
-const BADGE: Record<Artifact["review_status"], string> = {
-  draft: "bg-slate-200 text-slate-700",
-  needs_review: "bg-amber-100 text-amber-800",
-  approved: "bg-emerald-100 text-emerald-800",
-};
 
 export default function Home() {
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -156,15 +150,6 @@ export default function Home() {
     [input, selectedOpp, runStream],
   );
 
-  const doExport = useCallback(async (artifactId: number, format: "docx" | "pdf") => {
-    try {
-      const r = await exportArtifact(artifactId, format);
-      window.location.assign(r.download_url);
-    } catch (err) {
-      setItems((prev) => [...prev, { kind: "error", text: String(err) }]);
-    }
-  }, []);
-
   return (
     <main className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b bg-white px-4 py-3">
@@ -267,34 +252,7 @@ export default function Home() {
                 </p>
               )}
               {artifacts.map((a) => (
-                <article key={`a-${a.id}`} className="rounded border bg-slate-50 p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-semibold">{a.title}</h3>
-                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
-                      {a.kind} v{a.version}
-                    </span>
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${BADGE[a.review_status]}`}
-                    >
-                      {a.review_status.replace("_", " ")}
-                    </span>
-                    {(["docx", "pdf"] as const).map((fmt) => (
-                      <button
-                        key={fmt}
-                        className="rounded border px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200"
-                        onClick={() => doExport(a.id, fmt)}
-                      >
-                        {fmt}
-                      </button>
-                    ))}
-                  </div>
-                  {a.provenance && (
-                    <p className="mt-0.5 text-[11px] text-slate-400">{a.provenance}</p>
-                  )}
-                  <p className="mt-1 max-h-40 overflow-hidden whitespace-pre-wrap text-sm text-slate-700">
-                    {a.body}
-                  </p>
-                </article>
+                <ArtifactCard key={`a-${a.id}`} artifact={a} onChanged={refreshCanvas} />
               ))}
               {notes.map((n) => (
                 <article key={`n-${n.id}`} className="rounded border bg-slate-50 p-3">
