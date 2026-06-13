@@ -264,3 +264,49 @@ export async function getProfile(): Promise<Profile | null> {
   if (!res.ok) throw new Error(`profile failed: ${res.status}`);
   return res.json(); // server returns JSON null when no profile exists
 }
+
+// ----- artifact grounding & approval (spec: 2026-06-12-artifact-review-export-ui) -----
+
+export type GroundingFinding = {
+  text: string;
+  start: number;
+  end: number;
+  score: number;
+  chunk_id: number | null;
+  document_title: string | null;
+  supported: boolean;
+};
+
+export type GroundingReport = {
+  artifact_id: number;
+  threshold: number;
+  embedding_model: string;
+  checked_count: number;
+  unsupported_count: number;
+  findings: GroundingFinding[];
+  annotated_body: string;
+  stale: boolean;
+  created_at: string;
+};
+
+/** Run the embedding-similarity grounding check; also flips status to needs_review. */
+export async function runGrounding(id: number): Promise<GroundingReport> {
+  const res = await fetch(`/api/artifacts/${id}/grounding`, { method: "POST" });
+  if (!res.ok) await throwDetail(res, `grounding failed: ${res.status}`);
+  return res.json();
+}
+
+/** Cached grounding report, or null when none exists yet (the server's 404). */
+export async function getGrounding(id: number): Promise<GroundingReport | null> {
+  const res = await fetch(`/api/artifacts/${id}/grounding`);
+  if (res.status === 404) return null;
+  if (!res.ok) await throwDetail(res, `grounding fetch failed: ${res.status}`);
+  return res.json();
+}
+
+/** Transition needs_review -> approved; 409 from any other status (surfaced via detail). */
+export async function approveArtifact(id: number): Promise<Artifact> {
+  const res = await fetch(`/api/artifacts/${id}/approve`, { method: "POST" });
+  if (!res.ok) await throwDetail(res, `approve failed: ${res.status}`);
+  return res.json();
+}
