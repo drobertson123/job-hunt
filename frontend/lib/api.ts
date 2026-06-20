@@ -329,3 +329,39 @@ export async function approveArtifact(id: number): Promise<Artifact> {
   if (!res.ok) await throwDetail(res, `approve failed: ${res.status}`);
   return res.json();
 }
+
+// ----- briefing synthesis (spec: briefing-synthesis) -----
+
+export type BriefingFact = {
+  key: string;
+  question: string;
+  answer: string;
+  confidence: number | null;
+  source: string | null;
+};
+
+export type Briefing = {
+  id: number;
+  opportunity_id: string | null;
+  company_id: string | null;
+  summary: string;
+  facts: BriefingFact[];
+  source_hash: string | null;
+  generated_run_id: string | null;
+  refreshed_at: string;
+  created_at: string;
+};
+
+export async function fetchBriefing(oppId: string): Promise<Briefing | null> {
+  const res = await fetch(`/api/opportunities/${oppId}/briefing`);
+  if (!res.ok) throw new Error(`briefing failed: ${res.status}`);
+  return res.json();
+}
+
+export async function synthesizeBriefing(oppId: string): Promise<Briefing> {
+  const res = await fetch(`/api/opportunities/${oppId}/briefing/synthesize`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`synthesize briefing failed: ${res.status}`);
+  return res.json();
+}
