@@ -418,3 +418,31 @@ export async function fetchOpportunityDetail(oppId: string): Promise<Opportunity
   if (!res.ok) throw new Error(`opportunity detail failed: ${res.status}`);
   return res.json();
 }
+
+// ----- pipeline board (spec: pipeline-board) -----
+
+export type PipelineBoard = {
+  columns: string[];
+  by_stage: Record<string, OpportunityFull[]>;
+};
+
+export async function fetchPipeline(type?: "job" | "business"): Promise<PipelineBoard> {
+  const qs = type ? `?type=${type}` : "";
+  const res = await fetch(`/api/pipeline${qs}`);
+  if (!res.ok) throw new Error(`pipeline failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateStage(
+  oppId: string,
+  stage: string,
+  rationale: string,
+): Promise<OpportunityFull> {
+  const res = await fetch(`/api/opportunities/${oppId}/stage`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stage, rationale }),
+  });
+  if (!res.ok) throw new Error(`update stage failed: ${res.status}`);
+  return res.json();
+}
