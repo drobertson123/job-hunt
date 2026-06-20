@@ -90,6 +90,7 @@ def get_opportunity(opp_id: str, session: Session = Depends(get_session)) -> dic
             .where(Decision.opportunity_id == opp_id)
             .order_by(Decision.created_at.desc())
         ).all(),
+        "applications": services.list_applications(session, opportunity_id=opp_id),
     }
 
 
