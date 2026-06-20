@@ -1,6 +1,11 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.2.0 → 1.3.0
+Bump rationale: MINOR — added Local-only quality-gates rule (all testing/quality checks
+                run locally before commit; no GitHub Actions / hosted CI).
+
+--- 1.2.0 ---
 Version change: 1.1.0 → 1.2.0
 Bump rationale: MINOR — expanded Principle IV pipeline (added validate → review →
                 revise/resolve → PR stages) and added Push-Authority rules (human-only
@@ -127,6 +132,10 @@ backend/UI drift that accrues when layers are built ahead of their consumers.
   approach revised.
 - **Verification before completion**: Run the relevant tests/build and observe passing
   output before claiming completion, committing, or opening a PR.
+- **Local-only quality gates**: All testing and quality checks run locally and MUST pass
+  before code is committed to the repository. This project MUST NOT use GitHub Actions or
+  any other hosted CI service; the authoritative gate is the local toolchain (tests,
+  linters, and any pre-commit/pre-push hooks), not a remote runner.
 - **Branching (Gitflow)**: `main` holds stable, release-ready history; `develop` is the
   integration branch. Feature work branches as `feature/<name>` off `develop` and merges
   back to `develop`; releases cut `release/<version>` (merged to `main` and back to
@@ -156,4 +165,4 @@ guidance, PATCH for clarifications and non-semantic refinements. All plans and r
 expected to verify compliance with the principles above; unavoidable deviations MUST be
 documented and justified, not silently adopted.
 
-**Version**: 1.2.0 | **Ratified**: 2026-06-20 | **Last Amended**: 2026-06-20
+**Version**: 1.3.0 | **Ratified**: 2026-06-20 | **Last Amended**: 2026-06-20
