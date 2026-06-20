@@ -122,6 +122,9 @@ async def synthesize_briefing(
     prompt = _build_prompt(opp_text, corpus_text)
 
     model = get_config().default_agent_model
+    # Tool-less by design: opportunity/corpus text is untrusted (pasted/scraped),
+    # so we attach no tools/MCP server — prompt injection's blast radius stays
+    # content-only (a bad briefing), never an action. Do NOT add tools here.
     options = ClaudeAgentOptions(model=model, max_turns=1)
     chunks: list[str] = []
     async for message in query_fn(prompt=prompt, options=options):
