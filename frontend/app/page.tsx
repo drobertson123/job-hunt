@@ -23,6 +23,7 @@ import ProfileTab from "./components/ProfileTab";
 import ApplicationsTab from "./components/ApplicationsTab";
 import ArtifactCard from "./components/ArtifactCard";
 import BriefingTab from "./components/BriefingTab";
+import OpportunityDetailTab from "./components/OpportunityDetailTab";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -40,7 +41,9 @@ export default function Home() {
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
-  const [canvasTab, setCanvasTab] = useState<"workspace" | "profile" | "applications" | "briefing">("workspace");
+  const [canvasTab, setCanvasTab] = useState<
+    "workspace" | "profile" | "applications" | "briefing" | "detail"
+  >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -268,6 +271,16 @@ export default function Home() {
             >
               Briefing
             </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "detail"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("detail")}
+            >
+              Detail
+            </button>
           </div>
           {canvasTab === "profile" ? (
             <ProfileTab />
@@ -275,6 +288,8 @@ export default function Home() {
             <ApplicationsTab />
           ) : canvasTab === "briefing" ? (
             <BriefingTab opportunityId={selectedOpp} />
+          ) : canvasTab === "detail" ? (
+            <OpportunityDetailTab opportunityId={selectedOpp} />
           ) : (
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {artifacts.length === 0 && notes.length === 0 && (

@@ -365,3 +365,56 @@ export async function synthesizeBriefing(oppId: string): Promise<Briefing> {
   if (!res.ok) throw new Error(`synthesize briefing failed: ${res.status}`);
   return res.json();
 }
+
+// ----- opportunity detail (spec: opportunity-detail) -----
+
+export type OpportunityFull = {
+  id: string;
+  type: string;
+  title: string;
+  organization: string | null;
+  source: string | null;
+  url: string | null;
+  location: string | null;
+  stage: string;
+  fit_score: number | null;
+  summary: string | null;
+  details: Record<string, unknown>;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+  last_activity_at: string;
+};
+
+export type Action = {
+  id: number;
+  title: string;
+  detail: string;
+  kind: string;
+  status: string;
+  due_at: string | null;
+  opportunity_id: string | null;
+};
+
+export type Decision = {
+  id: number;
+  kind: string;
+  summary: string;
+  rationale: string;
+  created_at: string;
+};
+
+export type OpportunityDetail = {
+  opportunity: OpportunityFull;
+  actions: Action[];
+  artifacts: Artifact[];
+  decisions: Decision[];
+  applications: Application[];
+  briefing: Briefing | null;
+};
+
+export async function fetchOpportunityDetail(oppId: string): Promise<OpportunityDetail> {
+  const res = await fetch(`/api/opportunities/${oppId}`);
+  if (!res.ok) throw new Error(`opportunity detail failed: ${res.status}`);
+  return res.json();
+}
