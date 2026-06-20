@@ -446,3 +446,33 @@ export async function updateStage(
   if (!res.ok) throw new Error(`update stage failed: ${res.status}`);
   return res.json();
 }
+
+// ----- attention dashboard (spec: attention-dashboard) -----
+
+export type AttentionItem = {
+  kind: string; // "overdue_action" | "stale_opportunity" | "untriaged_opportunity"
+  severity: string; // "high" | "medium" | ...
+  opportunity_id: string | null;
+  title: string;
+  reason: string;
+  action_id?: number;
+  due_at?: string | null;
+  stage?: string;
+  last_activity_at?: string;
+};
+
+export type Attention = {
+  items: AttentionItem[];
+  counts: {
+    overdue_actions: number;
+    stale_opportunities: number;
+    untriaged_opportunities: number;
+    total: number;
+  };
+};
+
+export async function fetchAttention(): Promise<Attention> {
+  const res = await fetch("/api/attention");
+  if (!res.ok) throw new Error(`attention failed: ${res.status}`);
+  return res.json();
+}

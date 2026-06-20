@@ -25,6 +25,7 @@ import ArtifactCard from "./components/ArtifactCard";
 import BriefingTab from "./components/BriefingTab";
 import OpportunityDetailTab from "./components/OpportunityDetailTab";
 import BoardTab from "./components/BoardTab";
+import AttentionTab from "./components/AttentionTab";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -43,7 +44,7 @@ export default function Home() {
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [canvasTab, setCanvasTab] = useState<
-    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board"
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -292,6 +293,16 @@ export default function Home() {
             >
               Board
             </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "attention"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("attention")}
+            >
+              Attention
+            </button>
           </div>
           {canvasTab === "profile" ? (
             <ProfileTab />
@@ -303,6 +314,13 @@ export default function Home() {
             <OpportunityDetailTab opportunityId={selectedOpp} />
           ) : canvasTab === "board" ? (
             <BoardTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
+          ) : canvasTab === "attention" ? (
+            <AttentionTab
               onOpen={(id) => {
                 setSelectedOpp(id);
                 setCanvasTab("detail");
