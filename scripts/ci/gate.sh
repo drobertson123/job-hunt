@@ -58,16 +58,24 @@ else
   skip "ruff not installed — skipping (enable: uv add --dev ruff)"
 fi
 
-# --- 3. frontend lint (if deps installed) ----------------------------------
+# --- 3. frontend lint (only when deps installed AND eslint is configured) --
+# `next lint` prompts interactively when no ESLint config exists; a gate must
+# never block on a prompt, so we run it only once a real config is present.
 hdr "[3/3] frontend lint — npm run lint"
-if [ -f "$ROOT/frontend/package.json" ]; then
-  if [ -d "$ROOT/frontend/node_modules" ]; then
-    if (cd "$ROOT/frontend" && npm run --silent lint); then pass "next lint"; else fail "next lint"; fi
-  else
-    skip "frontend/node_modules absent — skipping (enable: npm --prefix frontend install)"
-  fi
-else
+FE="$ROOT/frontend"
+eslint_configured() {
+  ls "$FE"/.eslintrc* "$FE"/eslint.config.* >/dev/null 2>&1 && return 0
+  grep -q '"eslintConfig"' "$FE/package.json" 2>/dev/null
+}
+if [ ! -f "$FE/package.json" ]; then
   skip "no frontend/ — skipping"
+elif [ ! -d "$FE/node_modules" ]; then
+  skip "frontend/node_modules absent — skipping (enable: npm --prefix frontend install)"
+elif ! eslint_configured; then
+  skip "no ESLint config in frontend/ — skipping (set up: npm --prefix frontend run lint)"
+else
+  # </dev/null guards against any tool reading stdin and hanging the hook.
+  if (cd "$FE" && npm run --silent lint </dev/null); then pass "next lint"; else fail "next lint"; fi
 fi
 
 # --- summary ----------------------------------------------------------------
