@@ -23,6 +23,7 @@ from app import corpus_service, services
 from app.db import engine
 from app.models import (
     ActionKind,
+    ApplicationStatus,
     ArtifactFormat,
     ArtifactKind,
     DecisionKind,
@@ -179,6 +180,52 @@ async def record_action(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_application",
+    "Record or update a job application to an opportunity (ATS/portal + status).",
+    {
+        "type": "object",
+        "properties": {
+            "opportunity_id": {"type": "string"},
+            "status": {
+                "type": "string",
+                "enum": ["draft", "submitted", "under_review", "interviewing",
+                         "offer", "rejected", "withdrawn"],
+            },
+            "company_id": {"type": "string"},
+            "portal_url": {"type": "string"},
+            "external_id": {"type": "string"},
+            "submitted_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "login_hint": {"type": "string"},
+            "notes": {"type": "string"},
+            "application_id": {
+                "type": "string",
+                "description": "set to update an existing application",
+            },
+        },
+        "required": ["opportunity_id"],
+    },
+)
+async def record_application(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        app_row = services.record_application(
+            s,
+            opportunity_id=args["opportunity_id"],
+            status=_enum(ApplicationStatus, args.get("status"), ApplicationStatus.draft),
+            company_id=args.get("company_id"),
+            portal_url=args.get("portal_url"),
+            external_id=args.get("external_id"),
+            submitted_at=_parse_dt(args.get("submitted_at")),
+            login_hint=args.get("login_hint"),
+            notes=args.get("notes") or "",
+            application_id=args.get("application_id"),
+        )
+        return _ok(
+            f"Recorded application {app_row.id} "
+            f"({app_row.status.value}) for opportunity {app_row.opportunity_id}."
+        )
+
+
+@tool(
     "save_artifact",
     "Save a generated deliverable (CV, cover letter, research brief, etc.) as a "
     "versioned artifact linked to an opportunity. It appears in the canvas.",
@@ -283,6 +330,7 @@ ALL_TOOLS = [
     save_opportunity,
     update_pipeline_status,
     record_action,
+    record_application,
     save_artifact,
     record_decision,
     search_corpus,
