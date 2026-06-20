@@ -19,7 +19,7 @@ from typing import Any, TypeVar
 from claude_agent_sdk import create_sdk_mcp_server, tool
 from sqlmodel import Session
 
-from app import corpus_service, services
+from app import briefing_service, corpus_service, services
 from app.db import engine
 from app.models import (
     ActionKind,
@@ -226,6 +226,29 @@ async def record_application(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "synthesize_briefing",
+    "Synthesize a structured briefing (salary, remote, tech stack, why-fit, "
+    "concerns, ...) for an opportunity, grounded in its data and the user's corpus.",
+    {
+        "type": "object",
+        "properties": {"opportunity_id": {"type": "string"}},
+        "required": ["opportunity_id"],
+    },
+)
+async def synthesize_briefing(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        briefing = await briefing_service.synthesize_briefing(
+            s,
+            opportunity_id=args["opportunity_id"],
+            generated_run_id=current_run_id.get(),
+        )
+        return _ok(
+            f"Synthesized briefing for opportunity {briefing.opportunity_id} "
+            f"({len(briefing.facts)} facts)."
+        )
+
+
+@tool(
     "save_artifact",
     "Save a generated deliverable (CV, cover letter, research brief, etc.) as a "
     "versioned artifact linked to an opportunity. It appears in the canvas.",
@@ -331,6 +354,7 @@ ALL_TOOLS = [
     update_pipeline_status,
     record_action,
     record_application,
+    synthesize_briefing,
     save_artifact,
     record_decision,
     search_corpus,
