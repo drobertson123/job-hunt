@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AgentEvent,
+  Application,
   Artifact,
   Capability,
   Note,
   Opportunity,
   SettingsView,
+  fetchApplications,
   fetchArtifacts,
   fetchCapabilities,
   fetchNotes,
@@ -18,6 +20,7 @@ import {
   updateSettings,
 } from "@/lib/api";
 import ProfileTab from "./components/ProfileTab";
+import ApplicationsTab from "./components/ApplicationsTab";
 import ArtifactCard from "./components/ArtifactCard";
 
 type ChatItem =
@@ -36,7 +39,8 @@ export default function Home() {
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
-  const [canvasTab, setCanvasTab] = useState<"workspace" | "profile">("workspace");
+  const [canvasTab, setCanvasTab] = useState<"workspace" | "profile" | "applications">("workspace");
+  const [applications, setApplications] = useState<Application[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const refreshCanvas = useCallback(async () => {
@@ -57,6 +61,7 @@ export default function Home() {
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null));
     fetchCapabilities().then(setCaps).catch(() => setCaps([]));
+    fetchApplications().then(setApplications).catch(() => setApplications([]));
     refreshCanvas();
   }, [refreshCanvas]);
 
@@ -241,9 +246,21 @@ export default function Home() {
             >
               Profile
             </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "applications"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("applications")}
+            >
+              Applications ({applications.length})
+            </button>
           </div>
           {canvasTab === "profile" ? (
             <ProfileTab />
+          ) : canvasTab === "applications" ? (
+            <ApplicationsTab />
           ) : (
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {artifacts.length === 0 && notes.length === 0 && (
