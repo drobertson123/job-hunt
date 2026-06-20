@@ -45,14 +45,16 @@ export default function Home() {
 
   const refreshCanvas = useCallback(async () => {
     try {
-      const [n, a, o] = await Promise.all([
+      const [n, a, o, apps] = await Promise.all([
         fetchNotes(),
         fetchArtifacts(),
         fetchOpportunities(),
+        fetchApplications(),
       ]);
       setNotes(n);
       setArtifacts(a);
       setOpps(o);
+      setApplications(apps);
     } catch {
       /* ignore */
     }
@@ -61,7 +63,6 @@ export default function Home() {
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null));
     fetchCapabilities().then(setCaps).catch(() => setCaps([]));
-    fetchApplications().then(setApplications).catch(() => setApplications([]));
     refreshCanvas();
   }, [refreshCanvas]);
 
