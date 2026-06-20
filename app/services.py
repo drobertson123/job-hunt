@@ -17,6 +17,8 @@ from app.models import (
     Action,
     ActionKind,
     ActionStatus,
+    Application,
+    ApplicationStatus,
     Artifact,
     ArtifactFormat,
     ArtifactKind,
@@ -279,3 +281,51 @@ def record_decision(
     session.commit()
     session.refresh(decision)
     return decision
+
+
+# --- Applications ---------------------------------------------------------- #
+
+
+def record_application(
+    session: Session,
+    *,
+    opportunity_id: str,
+    status: ApplicationStatus = ApplicationStatus.draft,
+    company_id: str | None = None,
+    portal_url: str | None = None,
+    external_id: str | None = None,
+    submitted_at: datetime | None = None,
+    login_hint: str | None = None,
+    notes: str = "",
+    application_id: str | None = None,
+) -> Application:
+    app_row = session.get(Application, application_id) if application_id else None
+    if app_row is None:
+        app_row = Application(opportunity_id=opportunity_id)
+    # ponytail: full overwrite from args — caller sends the intended state.
+    app_row.opportunity_id = opportunity_id
+    app_row.status = status
+    app_row.company_id = company_id
+    app_row.portal_url = portal_url
+    app_row.external_id = external_id
+    app_row.submitted_at = submitted_at
+    app_row.login_hint = login_hint
+    app_row.notes = notes
+    app_row.updated_at = _utcnow()
+    session.add(app_row)
+    opp = session.get(Opportunity, opportunity_id)
+    if opp:
+        opp.last_activity_at = _utcnow()
+        session.add(opp)
+    session.commit()
+    session.refresh(app_row)
+    return app_row
+
+
+def list_applications(
+    session: Session, opportunity_id: str | None = None
+) -> list[Application]:
+    q = select(Application)
+    if opportunity_id:
+        q = q.where(Application.opportunity_id == opportunity_id)
+    return list(session.exec(q.order_by(Application.created_at.desc())).all())

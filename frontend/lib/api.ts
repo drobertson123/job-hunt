@@ -28,6 +28,19 @@ export type Artifact = {
   created_at: string;
 };
 
+export type Application = {
+  id: string;
+  opportunity_id: string;
+  company_id: string | null;
+  status: string;
+  portal_url: string | null;
+  external_id: string | null;
+  submitted_at: string | null;
+  login_hint: string | null;
+  notes: string;
+  created_at: string;
+};
+
 export type Opportunity = {
   id: string;
   title: string;
@@ -131,6 +144,12 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
 export async function fetchArtifacts(): Promise<Artifact[]> {
   const res = await fetch("/api/artifacts");
   if (!res.ok) throw new Error(`artifacts failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchApplications(): Promise<Application[]> {
+  const res = await fetch("/api/applications");
+  if (!res.ok) throw new Error(`applications failed: ${res.status}`);
   return res.json();
 }
 
