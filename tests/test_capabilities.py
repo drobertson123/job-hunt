@@ -28,6 +28,8 @@ def test_registry_has_the_expected_capabilities():
         # career-pack (network + apply)
         "network-scan",
         "apply-prep",
+        # career-pack (content library)
+        "content-library",
         # business-pack (slice F)
         "discover-opportunities",
         "qualify-opportunity",
@@ -44,7 +46,7 @@ def test_registry_skills_match_pack_directories():
 
 
 def test_skill_names_are_plugin_qualified():
-    assert len(caps.SKILL_NAMES) == 15
+    assert len(caps.SKILL_NAMES) == 16
     assert "career-pack:fit-analysis" in caps.SKILL_NAMES
     assert "business-pack:qualify-opportunity" in caps.SKILL_NAMES
 

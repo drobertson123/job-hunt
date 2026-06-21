@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from app.models import Contact, Opportunity, Profile
+from app.models import Contact, ContentBlock, Opportunity, Profile
 
 CAREER_PLUGIN = "career-pack"
 BUSINESS_PLUGIN = "business-pack"
@@ -30,6 +30,7 @@ class Capability:
     plugin: str  # which authored pack ships the skill (qualified name prefix)
     include_preferences: bool = False  # inline job preferences into the prompt
     include_contacts: bool = False  # inline the user's contacts into the prompt
+    include_content: bool = False  # inline the content library into the prompt
 
 
 CAPABILITIES = [
@@ -72,6 +73,7 @@ CAPABILITIES = [
         requires_input=False,
         include_profile=True,
         plugin=CAREER_PLUGIN,
+        include_content=True,
     ),
     Capability(
         name="cover-letter",
@@ -185,6 +187,16 @@ CAPABILITIES = [
         include_profile=True,
         plugin=BUSINESS_PLUGIN,
     ),
+    Capability(
+        name="content-library",
+        skill="content-library",
+        label="Build content library",
+        description="Synthesize a reusable library of headline/summary/bullet variants from your corpus.",
+        requires_opportunity=False,
+        requires_input=False,
+        include_profile=True,
+        plugin=CAREER_PLUGIN,
+    ),
 ]
 
 REGISTRY: dict[str, Capability] = {c.name: c for c in CAPABILITIES}
@@ -228,6 +240,22 @@ def profile_block(profile: Profile | None) -> str:
     return "\n".join(lines) or "- (empty profile)"
 
 
+def content_library_block(blocks: list["ContentBlock"] | None) -> str:
+    if not blocks:
+        return "- (content library empty — run the content-library capability to build it)"
+    by_kind: dict[str, list[str]] = {}
+    for b in blocks:
+        tag = f" [{b.audience}]" if b.audience else ""
+        by_kind.setdefault(b.kind.value, []).append(f"{b.text}{tag}")
+    lines = []
+    for kind in ("headline", "summary", "bullet", "other"):
+        items = by_kind.get(kind)
+        if items:
+            lines.append(f"{kind}s:")
+            lines.extend(f"  - {t}" for t in items[:12])
+    return "\n".join(lines)
+
+
 def contacts_block(contacts: list[Contact] | None) -> str:
     if not contacts:
         return "- (no contacts on file — import from Google or add manually)"
@@ -258,6 +286,7 @@ def build_prompt(
     input_text: str = "",
     profile: Profile | None = None,
     contacts: list[Contact] | None = None,
+    content_blocks: list["ContentBlock"] | None = None,
 ) -> str:
     parts = [
         f'Use the "{cap.plugin}:{cap.skill}" skill now (via the Skill tool), '
@@ -271,6 +300,8 @@ def build_prompt(
         parts.append("Job preferences:\n" + preferences_block(profile))
     if cap.include_contacts:
         parts.append("Contacts (grouped by organization):\n" + contacts_block(contacts))
+    if cap.include_content:
+        parts.append("Content library (reuse/adapt these vetted blocks where they fit):\n" + content_library_block(content_blocks))
     if input_text.strip():
         parts.append("Input:\n" + input_text.strip())
     return "\n\n".join(parts)

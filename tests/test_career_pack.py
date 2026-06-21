@@ -22,6 +22,7 @@ EXPECTED_SKILLS = {
     "sms-analyser",
     "network-scan",
     "apply-prep",
+    "content-library",
 }
 
 
@@ -76,7 +77,7 @@ def test_build_options_enables_both_packs(tmp_path):
         {"type": "local", "path": str(cfg.business_pack_dir)},
     ]
     assert opts.skills == caps.SKILL_NAMES
-    assert len(opts.skills) == 15
+    assert len(opts.skills) == 16
     for name in ("Skill", "WebSearch", "WebFetch"):
         assert name in opts.allowed_tools
     assert all(t in opts.allowed_tools for t in ALL_TOOL_NAMES)
