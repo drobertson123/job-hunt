@@ -71,6 +71,9 @@ class AppConfig(BaseSettings):
     daily_search_interval_hours: int = 24
     daily_search_poll_seconds: int = 3600
 
+    # Optional shared secret for the inbound SMS webhook (None = no auth).
+    sms_webhook_token: str | None = None
+
     # --- "What needs attention" thresholds ---
     attention_stale_active_days: int = 7  # active/in-dialogue with no activity
     attention_untriaged_days: int = 14  # new/qualifying left sitting
