@@ -8,6 +8,7 @@ import {
   deleteInterview,
   fetchInterviews,
   fetchOpportunities,
+  syncGoogleCalendar,
 } from "@/lib/api";
 import FetchError from "./FetchError";
 
@@ -22,6 +23,8 @@ export default function InterviewsTab({ onOpen }: { onOpen: (oppId: string) => v
   const [location, setLocation] = useState("");
   const [oppId, setOppId] = useState("");
   const [error, setError] = useState(false);
+  const [calSyncResult, setCalSyncResult] = useState<string | null>(null);
+  const [calSyncing, setCalSyncing] = useState(false);
 
   const load = useCallback(() => {
     fetchInterviews(true)
@@ -117,7 +120,28 @@ export default function InterviewsTab({ onOpen }: { onOpen: (oppId: string) => v
         </button>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={async () => {
+            setCalSyncing(true);
+            setCalSyncResult(null);
+            try {
+              const r = await syncGoogleCalendar();
+              setCalSyncResult(`${r.pushed} pushed`);
+            } catch (e) {
+              setCalSyncResult(String(e));
+            } finally {
+              setCalSyncing(false);
+            }
+          }}
+          disabled={calSyncing}
+          className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+        >
+          {calSyncing ? "Syncing…" : "Sync to Google Calendar"}
+        </button>
+        {calSyncResult && (
+          <span className="text-[11px] text-slate-500">{calSyncResult}</span>
+        )}
         <a
           href="/api/interviews/calendar.ics"
           className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200"

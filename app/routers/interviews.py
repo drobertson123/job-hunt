@@ -86,6 +86,18 @@ def interview_ics(
 def delete_interview(
     interview_id: int, session: Session = Depends(get_session)
 ) -> Response:
+    ev = session.get(InterviewEvent, interview_id)
+    if ev is None:
+        raise HTTPException(status_code=404, detail="interview not found")
+    gcal_id = ev.gcal_event_id
     if not services.delete_interview(session, interview_id):
         raise HTTPException(status_code=404, detail="interview not found")
+    if gcal_id:
+        from app import google_oauth as go, gcal_service
+        from app.models import _utcnow
+        try:
+            if go.status(session).get("connected"):
+                gcal_service.delete_event(go.get_access_token(session, now=_utcnow()), gcal_id)
+        except Exception:  # noqa: BLE001 — google cleanup is best-effort
+            pass
     return Response(status_code=204)
