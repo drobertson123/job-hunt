@@ -44,10 +44,14 @@ async def lifespan(app: FastAPI):
     from app.agent.session import get_session
 
     await get_session().start_keepalive()
+    from app.search_scheduler import get_scheduler
+
+    await get_scheduler().start()
     try:
         yield
     finally:
         await get_session().stop()
+        await get_scheduler().stop()
 
 
 app = FastAPI(title="Opportunity Hunter", version=__version__, lifespan=lifespan)
