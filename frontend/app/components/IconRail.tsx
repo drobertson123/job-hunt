@@ -21,7 +21,7 @@ const ITEMS: Item[] = [
   { key: "contacts", label: "Contacts", icon: I("M8 7.5a3 3 0 100-6 3 3 0 000 6z M2.5 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5 M15 5.2a2.8 2.8 0 010 5.2") },
   { key: "sources", label: "Sources", icon: I("M10.5 16a5.5 5.5 0 100-11 5.5 5.5 0 000 11z M10.5 10.5v.1 M10.5 4v1.5M10.5 15.5V17M4 10.5H2.5M18.5 10.5H17") },
   { key: "library", label: "Library", icon: I("M5 3h11v15H5z M5 3a1.5 1.5 0 000 3h11 M9 7h4") },
-  { key: "interviews-cal", label: "Documents", icon: I("M5 3h6l5 5v10H5z M11 3v5h5") },
+  { key: "documents", label: "Documents", icon: I("M5 3h6l5 5v10H5z M11 3v5h5") },
   { key: "profile", label: "Profile", icon: I("M10.5 10.5a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z M4 18c0-3.4 2.9-5.5 6.5-5.5S17 14.6 17 18") },
   { key: "workspace", label: "Workspace", icon: I("M3 5.5h5l1.5 2H18v9.5H3z") },
 ];
@@ -35,10 +35,7 @@ export default function IconRail({
   onSelect: (k: string) => void;
   initials?: string;
 }) {
-  // de-dupe: the "Documents" alias points at workspace
-  const items = ITEMS.map((it) => (it.key === "interviews-cal" ? { ...it, key: "workspace" } : it)).filter(
-    (it, i, a) => a.findIndex((x) => x.key === it.key) === i
-  );
+  const items = ITEMS.filter((it, i, a) => a.findIndex((x) => x.key === it.key) === i);
   return (
     <nav className="flex w-[76px] flex-none flex-col items-center gap-2.5 border-r border-line bg-surface py-4">
       <div className="mb-3 flex h-[42px] w-[42px] items-center justify-center rounded-md bg-accent shadow-accent">
