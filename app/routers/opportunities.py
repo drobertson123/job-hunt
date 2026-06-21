@@ -16,6 +16,7 @@ from app.models import (
     Briefing,
     Company,
     Decision,
+    JobSource,
     Opportunity,
     OpportunityType,
     PipelineStage,
@@ -96,6 +97,7 @@ def get_opportunity(opp_id: str, session: Session = Depends(get_session)) -> dic
         "communications": services.list_communications(session, opportunity_id=opp_id),
         "contacts": services.list_contacts(session, opportunity_id=opp_id),
         "company": session.get(Company, opp.company_id) if opp.company_id else None,
+        "source": session.get(JobSource, opp.source_id) if opp.source_id else None,
         "briefing": briefing_service.get_briefing(session, opp_id),
     }
 
