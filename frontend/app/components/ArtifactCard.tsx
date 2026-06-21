@@ -9,6 +9,7 @@ import {
   getGrounding,
   runGrounding,
 } from "@/lib/api";
+import MarkdownView from "./MarkdownView";
 
 // Mirror of grounding_service.py GENERATIVE_KINDS — a Task-4 check asserts they match.
 const GENERATIVE_KINDS = ["cv", "cover_letter", "pitch", "outreach"] as const;
@@ -154,8 +155,8 @@ export default function ArtifactCard({
             </div>
           )}
 
-          <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded border bg-white p-3 text-sm text-slate-700">
-            {bodyText}
+          <div className="max-h-96 overflow-y-auto rounded border bg-white p-3">
+            <MarkdownView text={bodyText} />
           </div>
 
           {generative && (

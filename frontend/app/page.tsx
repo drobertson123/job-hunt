@@ -24,6 +24,7 @@ import {
 } from "@/lib/api";
 import ProfileTab from "./components/ProfileTab";
 import ApplicationsTab from "./components/ApplicationsTab";
+import MarkdownView from "./components/MarkdownView";
 import ArtifactCard from "./components/ArtifactCard";
 import BriefingTab from "./components/BriefingTab";
 import OpportunityDetailTab from "./components/OpportunityDetailTab";
@@ -387,7 +388,7 @@ export default function Home() {
               {notes.map((n) => (
                 <article key={`n-${n.id}`} className="rounded border bg-slate-50 p-3">
                   <h3 className="text-sm font-semibold">{n.title}</h3>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{n.body}</p>
+                  <MarkdownView className="mt-1" text={n.body} />
                 </article>
               ))}
             </div>

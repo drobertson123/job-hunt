@@ -12,6 +12,7 @@ import {
   updatePinnedSkills,
   uploadDocument,
 } from "@/lib/api";
+import MarkdownView from "./MarkdownView";
 
 /** Self-contained Profile tab: corpus doc management + synthesized profile. */
 export default function ProfileTab() {
@@ -308,7 +309,7 @@ function ProfileCard({ profile }: { profile: Profile }) {
     <article className="rounded border bg-slate-50 p-3">
       {profile.headline && <h4 className="text-sm font-semibold">{profile.headline}</h4>}
       {profile.summary && (
-        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{profile.summary}</p>
+        <MarkdownView className="mt-1" text={profile.summary} />
       )}
       {profile.skills.length > 0 && (
         <div className="mt-2">
