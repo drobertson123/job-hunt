@@ -9,8 +9,11 @@ import {
   getProfile,
   pasteDocument,
   synthesizeProfile,
+  updatePinnedSkills,
+  updatePreferences,
   uploadDocument,
 } from "@/lib/api";
+import MarkdownView from "./MarkdownView";
 
 /** Self-contained Profile tab: corpus doc management + synthesized profile. */
 export default function ProfileTab() {
@@ -20,6 +23,10 @@ export default function ProfileTab() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
+  const [skillInput, setSkillInput] = useState("");
+  const [dealbreakersInput, setDealbreakersInput] = useState("");
+  const [mustHavesInput, setMustHavesInput] = useState("");
+  const [niceToHavesInput, setNiceToHavesInput] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -108,10 +115,255 @@ export default function ProfileTab() {
       <hr />
 
       <section>
+        <h3 className="text-sm font-medium text-slate-600">Your skills</h3>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {(profile?.pinned_skills ?? []).map((s) => (
+            <span
+              key={s}
+              className="flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs text-white"
+            >
+              {s}
+              <button
+                aria-label={`Remove ${s}`}
+                className="leading-none hover:text-slate-300"
+                onClick={() =>
+                  updatePinnedSkills((profile?.pinned_skills ?? []).filter((x) => x !== s)).then(
+                    setProfile,
+                  )
+                }
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            className="rounded border px-2 py-1 text-sm"
+            placeholder="Add a skill…"
+            value={skillInput}
+            onChange={(e) => setSkillInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && skillInput.trim()) {
+                updatePinnedSkills([...(profile?.pinned_skills ?? []), skillInput.trim()]).then(
+                  (p) => {
+                    setProfile(p);
+                    setSkillInput("");
+                  },
+                );
+              }
+            }}
+          />
+          <button
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            disabled={!skillInput.trim()}
+            onClick={() => {
+              if (!skillInput.trim()) return;
+              updatePinnedSkills([...(profile?.pinned_skills ?? []), skillInput.trim()]).then(
+                (p) => {
+                  setProfile(p);
+                  setSkillInput("");
+                },
+              );
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </section>
+
+      <hr />
+
+      <section>
+        <h3 className="text-sm font-medium text-slate-600">Preferences</h3>
+
+        {/* Dealbreakers */}
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500">
+            Dealbreakers <span className="normal-case font-normal text-slate-400">— any of these → Skip</span>
+          </h4>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(profile?.dealbreakers ?? []).map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-xs text-white"
+              >
+                {s}
+                <button
+                  aria-label={`Remove ${s}`}
+                  className="leading-none hover:text-slate-300"
+                  onClick={() =>
+                    updatePreferences({ dealbreakers: (profile?.dealbreakers ?? []).filter((x) => x !== s) }).then(
+                      setProfile,
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              placeholder="Add a dealbreaker…"
+              value={dealbreakersInput}
+              onChange={(e) => setDealbreakersInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && dealbreakersInput.trim()) {
+                  updatePreferences({ dealbreakers: [...(profile?.dealbreakers ?? []), dealbreakersInput.trim()] }).then(
+                    (p) => {
+                      setProfile(p);
+                      setDealbreakersInput("");
+                    },
+                  );
+                }
+              }}
+            />
+            <button
+              className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              disabled={!dealbreakersInput.trim()}
+              onClick={() => {
+                if (!dealbreakersInput.trim()) return;
+                updatePreferences({ dealbreakers: [...(profile?.dealbreakers ?? []), dealbreakersInput.trim()] }).then(
+                  (p) => {
+                    setProfile(p);
+                    setDealbreakersInput("");
+                  },
+                );
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Must-haves */}
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500">Must-haves</h4>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(profile?.must_haves ?? []).map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs text-white"
+              >
+                {s}
+                <button
+                  aria-label={`Remove ${s}`}
+                  className="leading-none hover:text-slate-300"
+                  onClick={() =>
+                    updatePreferences({ must_haves: (profile?.must_haves ?? []).filter((x) => x !== s) }).then(
+                      setProfile,
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              placeholder="Add a must-have…"
+              value={mustHavesInput}
+              onChange={(e) => setMustHavesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && mustHavesInput.trim()) {
+                  updatePreferences({ must_haves: [...(profile?.must_haves ?? []), mustHavesInput.trim()] }).then(
+                    (p) => {
+                      setProfile(p);
+                      setMustHavesInput("");
+                    },
+                  );
+                }
+              }}
+            />
+            <button
+              className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              disabled={!mustHavesInput.trim()}
+              onClick={() => {
+                if (!mustHavesInput.trim()) return;
+                updatePreferences({ must_haves: [...(profile?.must_haves ?? []), mustHavesInput.trim()] }).then(
+                  (p) => {
+                    setProfile(p);
+                    setMustHavesInput("");
+                  },
+                );
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Nice-to-haves */}
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500">Nice-to-haves</h4>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(profile?.nice_to_haves ?? []).map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded bg-slate-500 px-2 py-0.5 text-xs text-white"
+              >
+                {s}
+                <button
+                  aria-label={`Remove ${s}`}
+                  className="leading-none hover:text-slate-300"
+                  onClick={() =>
+                    updatePreferences({ nice_to_haves: (profile?.nice_to_haves ?? []).filter((x) => x !== s) }).then(
+                      setProfile,
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              placeholder="Add a nice-to-have…"
+              value={niceToHavesInput}
+              onChange={(e) => setNiceToHavesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && niceToHavesInput.trim()) {
+                  updatePreferences({ nice_to_haves: [...(profile?.nice_to_haves ?? []), niceToHavesInput.trim()] }).then(
+                    (p) => {
+                      setProfile(p);
+                      setNiceToHavesInput("");
+                    },
+                  );
+                }
+              }}
+            />
+            <button
+              className="rounded bg-slate-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              disabled={!niceToHavesInput.trim()}
+              onClick={() => {
+                if (!niceToHavesInput.trim()) return;
+                updatePreferences({ nice_to_haves: [...(profile?.nice_to_haves ?? []), niceToHavesInput.trim()] }).then(
+                  (p) => {
+                    setProfile(p);
+                    setNiceToHavesInput("");
+                  },
+                );
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <hr />
+
+      <section>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-slate-600">Synthesized profile</h3>
           <button
-            className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             onClick={synthesize}
             disabled={synthesizing || busy}
           >
@@ -229,7 +481,7 @@ function AddDocuments({
             onChange={(e) => setText(e.target.value)}
           />
           <button
-            className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             disabled={busy || !title.trim() || !text.trim()}
             onClick={add}
           >
@@ -246,18 +498,21 @@ function ProfileCard({ profile }: { profile: Profile }) {
     <article className="rounded border bg-slate-50 p-3">
       {profile.headline && <h4 className="text-sm font-semibold">{profile.headline}</h4>}
       {profile.summary && (
-        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{profile.summary}</p>
+        <MarkdownView className="mt-1" text={profile.summary} />
       )}
       {profile.skills.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {profile.skills.map((s, i) => (
-            <span
-              key={`${s}-${i}`}
-              className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
-            >
-              {s}
-            </span>
-          ))}
+        <div className="mt-2">
+          <h5 className="text-xs font-semibold uppercase text-slate-500">Detected skills</h5>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {profile.skills.map((s, i) => (
+              <span
+                key={`${s}-${i}`}
+                className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
         </div>
       )}
       {profile.experience.length > 0 && (

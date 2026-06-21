@@ -64,6 +64,18 @@ class AppConfig(BaseSettings):
     # --- Agent safety caps (bound runaway loops / cost) ---
     agent_max_turns: int = 24
     agent_timeout_seconds: int = 300
+    # Persistent Claude CLI session: keep-alive probe interval (0 disables).
+    agent_keep_alive_seconds: int = 120
+
+    # Daily job-search scheduler.
+    daily_search_interval_hours: int = 24
+    daily_search_poll_seconds: int = 3600
+
+    # Optional shared secret for the inbound SMS webhook (None = no auth).
+    sms_webhook_token: str | None = None
+
+    # Google OAuth loopback redirect URI (must match Google Cloud console).
+    google_redirect_uri: str = "http://127.0.0.1:8000/api/google/oauth/callback"
 
     # --- "What needs attention" thresholds ---
     attention_stale_active_days: int = 7  # active/in-dialogue with no activity

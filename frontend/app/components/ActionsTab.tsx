@@ -106,7 +106,7 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
         <button
           onClick={submit}
           disabled={!title.trim()}
-          className="rounded bg-slate-900 px-3 py-1 text-xs text-white disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-xs text-white disabled:opacity-50"
         >
           Add
         </button>
@@ -118,7 +118,7 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
             key={f}
             onClick={() => setFilter(f)}
             className={`rounded px-2 py-1 text-xs capitalize ${
-              filter === f ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+              filter === f ? "bg-accent text-white" : "bg-slate-100 text-slate-600"
             }`}
           >
             {f}

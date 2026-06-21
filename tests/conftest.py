@@ -54,19 +54,23 @@ def _clear_db():
         Communication,
         Company,
         Contact,
+        ContentBlock,
         Decision,
         Document,
         GroundingReport,
+        InterviewEvent,
         JobSource,
         Opportunity,
         Profile,
+        Setting,
     )
 
     with Session(engine) as s:
         for model in (
-            Briefing, Communication, Application,
+            Briefing, Communication, Application, InterviewEvent,
             GroundingReport, Artifact, Action, Decision, Contact,
-            Opportunity, JobSource, Company, Chunk, Document, Profile,
+            Opportunity, JobSource, Company, Chunk, Document, Profile, Setting,
+            ContentBlock,
         ):
             s.exec(delete(model))
         s.commit()

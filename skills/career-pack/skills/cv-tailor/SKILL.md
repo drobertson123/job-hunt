@@ -28,7 +28,11 @@ unforgivable failure.
 
 ## Steps
 
-1. Read the Opportunity and Candidate profile blocks.
+1. Read the Opportunity and Candidate profile blocks. If a **Content library**
+   block is present in the prompt, prefer selecting or adapting the headline and
+   summary variant that best fits this role and reusing matching achievement
+   bullets rather than writing from scratch — all reused claims are already
+   corpus-grounded.
 2. Run the corpus searches (grounding rules above).
 3. Draft the CV: summary targeted at the role, skills list limited to
    supported skills, reverse-chronological experience with supported bullets.

@@ -56,12 +56,20 @@ export type Capability = {
   requires_input: boolean;
 };
 
+export type GoogleStatus = {
+  credentials_configured: boolean;
+  connected: boolean;
+  email: string | null;
+  scopes: string;
+};
+
 export type SettingsView = {
   anthropic_key_configured: boolean;
   openai_key_configured: boolean;
   agent_model: string;
   default_agent_model: string;
   deep_analysis_model: string;
+  google: GoogleStatus;
 };
 
 /** POST JSON to an SSE endpoint and dispatch each agent event. */
@@ -186,7 +194,13 @@ export async function getSettings(): Promise<SettingsView> {
 }
 
 export async function updateSettings(
-  body: Partial<{ anthropic_api_key: string; openai_api_key: string; agent_model: string }>,
+  body: Partial<{
+    anthropic_api_key: string;
+    openai_api_key: string;
+    agent_model: string;
+    google_client_id: string;
+    google_client_secret: string;
+  }>,
 ): Promise<SettingsView> {
   const res = await fetch("/api/settings", {
     method: "PUT",
@@ -194,6 +208,24 @@ export async function updateSettings(
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`settings update failed: ${res.status}`);
+  return res.json();
+}
+
+export async function syncGmail(): Promise<{ fetched: number; created: number; skipped: number }> {
+  const res = await fetch("/api/google/gmail/sync", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `gmail sync failed: ${res.status}`);
+  return res.json();
+}
+
+export async function syncGoogleCalendar(): Promise<{ pushed: number; updated: number }> {
+  const res = await fetch("/api/google/calendar/sync", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `calendar sync failed: ${res.status}`);
+  return res.json();
+}
+
+export async function importGoogleContacts(): Promise<{ imported: number; skipped: number }> {
+  const res = await fetch("/api/google/contacts/import", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `contacts import failed: ${res.status}`);
   return res.json();
 }
 
@@ -212,6 +244,10 @@ export type Profile = {
   headline: string | null;
   summary: string | null;
   skills: string[];
+  pinned_skills: string[];
+  dealbreakers: string[];
+  must_haves: string[];
+  nice_to_haves: string[];
   experience: Record<string, unknown>[];
   achievements: string[];
   target_titles: string[];
@@ -282,6 +318,36 @@ export async function getProfile(): Promise<Profile | null> {
   const res = await fetch("/api/corpus/profile");
   if (!res.ok) throw new Error(`profile failed: ${res.status}`);
   return res.json(); // server returns JSON null when no profile exists
+}
+
+export async function fetchProfile(): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile");
+  if (!res.ok) throw new Error(`profile failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updatePinnedSkills(skills: string[]): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pinned_skills: skills }),
+  });
+  if (!res.ok) throw new Error(`update skills failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updatePreferences(body: {
+  dealbreakers?: string[];
+  must_haves?: string[];
+  nice_to_haves?: string[];
+}): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`update preferences failed: ${res.status}`);
+  return res.json();
 }
 
 // ----- artifact grounding & approval (spec: 2026-06-12-artifact-review-export-ui) -----
@@ -593,6 +659,7 @@ export type Contact = {
   organization: string | null;
   company_id: string | null;
   link: string | null;
+  email?: string | null;
   notes: string;
   created_at: string;
 };
@@ -610,6 +677,7 @@ export async function createContact(body: {
   role?: string | null;
   organization?: string | null;
   link?: string | null;
+  email?: string | null;
   notes?: string;
 }): Promise<Contact> {
   const res = await fetch("/api/contacts", {
@@ -621,6 +689,155 @@ export async function createContact(body: {
   return res.json();
 }
 
+// ----- interviews (spec: interview-calendar) -----
+
+export type Interview = {
+  id: number;
+  opportunity_id: string | null;
+  title: string;
+  kind: string;
+  starts_at: string;
+  ends_at: string | null;
+  location: string;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchInterviews(upcoming = true): Promise<Interview[]> {
+  const res = await fetch(`/api/interviews${upcoming ? "?upcoming=true" : ""}`);
+  if (!res.ok) throw new Error(`interviews failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createInterview(body: {
+  title: string;
+  starts_at: string;
+  opportunity_id?: string | null;
+  kind?: string;
+  location?: string;
+  notes?: string;
+}): Promise<Interview> {
+  const res = await fetch("/api/interviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create interview failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteInterview(id: number): Promise<void> {
+  const res = await fetch(`/api/interviews/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`delete interview failed: ${res.status}`);
+}
+
+// ----- weekly review (spec: 2026-06-21-weekly-process) -----
+
+export type WeeklyOpp = {
+  id: string;
+  title: string;
+  organization: string | null;
+  stage: string;
+  type: string;
+};
+
+export type WeeklyInterview = {
+  id: number;
+  title: string;
+  starts_at: string;
+  opportunity_id: string | null;
+};
+
+export type WeeklyReview = {
+  to_identify: WeeklyOpp[];
+  to_apply: WeeklyOpp[];
+  to_follow_up: WeeklyOpp[];
+  interviews_this_week: WeeklyInterview[];
+  counts: Record<string, number>;
+};
+
+export async function fetchWeeklyReview(): Promise<WeeklyReview> {
+  const res = await fetch("/api/weekly-review");
+  if (!res.ok) throw new Error(`weekly review failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createWeeklyActions(): Promise<{ created: number }> {
+  const res = await fetch("/api/weekly-review/actions", { method: "POST" });
+  if (!res.ok) throw new Error(`create weekly actions failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- content library (spec: 2026-06-21-content-library) -----
+
+export type ContentBlock = {
+  id: number;
+  kind: string;
+  audience: string;
+  text: string;
+  tags: string[];
+  created_at: string;
+};
+
+export async function fetchContentBlocks(): Promise<ContentBlock[]> {
+  const res = await fetch("/api/content-blocks");
+  if (!res.ok) throw new Error(`content blocks failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteContentBlock(id: number): Promise<void> {
+  const res = await fetch(`/api/content-blocks/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`delete content block failed: ${res.status}`);
+}
+
+// ----- agent runs (spec: board-rail) -----
+
+export type RunSummary = {
+  id: string;
+  prompt: string;
+  model: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchRuns(limit = 30): Promise<RunSummary[]> {
+  const res = await fetch(`/api/runs?limit=${limit}`);
+  if (!res.ok) throw new Error(`runs failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- pipeline metrics (spec: 2026-06-21-metrics) -----
+
+export type Metrics = {
+  kpis: { total_applications: number; this_month: number; response_rate: number; interview_rate: number; active: number };
+  funnel: { label: string; count: number; rate: number | null }[];
+  volume: { week: string; count: number }[];
+  sources: { source: string; count: number }[];
+};
+
+export async function fetchMetrics(): Promise<Metrics> {
+  const res = await fetch("/api/metrics");
+  if (!res.ok) throw new Error(`metrics failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- relationships network (spec: 2026-06-21-relationships) -----
+
+export type RelCluster = {
+  name: string;
+  contacts: { id: number; name: string; role: string | null }[];
+  opportunities: { id: string; title: string; stage: string }[];
+  score: number;
+  warm: boolean;
+};
+
+export async function fetchRelationships(): Promise<{ clusters: RelCluster[]; warm_intro_count: number }> {
+  const res = await fetch("/api/relationships");
+  if (!res.ok) throw new Error(`relationships failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {
@@ -629,6 +846,7 @@ export type JobSource = {
   kind: string;
   url: string | null;
   saved_query: string | null;
+  auto_search: boolean;
   last_checked_at: string | null;
   referrer_contact_id: number | null;
   notes: string;
@@ -638,5 +856,39 @@ export type JobSource = {
 export async function fetchJobSources(): Promise<JobSource[]> {
   const res = await fetch("/api/job-sources");
   if (!res.ok) throw new Error(`job sources failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createJobSource(body: {
+  name: string;
+  kind?: string;
+  saved_query?: string | null;
+  auto_search?: boolean;
+}): Promise<JobSource> {
+  const res = await fetch("/api/job-sources", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create job source failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateJobSource(
+  id: string,
+  body: { saved_query?: string | null; auto_search?: boolean; name?: string }
+): Promise<JobSource> {
+  const res = await fetch(`/api/job-sources/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`update job source failed: ${res.status}`);
+  return res.json();
+}
+
+export async function runJobSourceSearch(id: string): Promise<{ status: string }> {
+  const res = await fetch(`/api/job-sources/${id}/search`, { method: "POST" });
+  if (!res.ok) throw new Error(`run search failed: ${res.status}`);
   return res.json();
 }

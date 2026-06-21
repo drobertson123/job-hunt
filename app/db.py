@@ -39,6 +39,15 @@ def init_db() -> None:
     _ensure_column(engine, "opportunities", "company_id", "VARCHAR")
     _ensure_column(engine, "opportunities", "source_id", "VARCHAR")
     _ensure_column(engine, "contacts", "company_id", "VARCHAR")
+    _ensure_column(engine, "profile", "pinned_skills", "JSON DEFAULT '[]'")
+    _ensure_column(engine, "profile", "dealbreakers", "JSON DEFAULT '[]'")
+    _ensure_column(engine, "profile", "must_haves", "JSON DEFAULT '[]'")
+    _ensure_column(engine, "profile", "nice_to_haves", "JSON DEFAULT '[]'")
+    _ensure_column(engine, "job_sources", "auto_search", "BOOLEAN DEFAULT 0")
+    _ensure_column(engine, "communications", "external_id", "VARCHAR")
+    _ensure_column(engine, "interview_events", "gcal_event_id", "VARCHAR")
+    _ensure_column(engine, "contacts", "email", "VARCHAR")
+    _ensure_column(engine, "contacts", "google_resource_name", "VARCHAR")
 
 
 def get_session() -> Iterator[Session]:

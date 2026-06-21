@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app import capabilities as caps
+from app import services
 from app import settings_service as ss
 from app.agent.runner import stream_run
 from app.db import get_session
@@ -76,8 +77,11 @@ async def invoke(
     profile = (
         session.exec(select(Profile)).first() if cap.include_profile else None
     )
+    contacts = services.list_contacts(session) if cap.include_contacts else None
+    content_blocks = services.list_content_blocks(session) if cap.include_content else None
     prompt = caps.build_prompt(
-        cap, opportunity=opportunity, input_text=body.input, profile=profile
+        cap, opportunity=opportunity, input_text=body.input, profile=profile,
+        contacts=contacts, content_blocks=content_blocks,
     )
     model = ss.resolve_agent_model(session)
     api_key = ss.resolve_anthropic_key(session)

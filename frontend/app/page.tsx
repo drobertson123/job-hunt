@@ -20,10 +20,10 @@ import {
   getSettings,
   invokeCapability,
   streamChat,
-  updateSettings,
 } from "@/lib/api";
 import ProfileTab from "./components/ProfileTab";
 import ApplicationsTab from "./components/ApplicationsTab";
+import MarkdownView from "./components/MarkdownView";
 import ArtifactCard from "./components/ArtifactCard";
 import BriefingTab from "./components/BriefingTab";
 import OpportunityDetailTab from "./components/OpportunityDetailTab";
@@ -31,6 +31,17 @@ import BoardTab from "./components/BoardTab";
 import AttentionTab from "./components/AttentionTab";
 import CompaniesTab from "./components/CompaniesTab";
 import ActionsTab from "./components/ActionsTab";
+import InterviewsTab from "./components/InterviewsTab";
+import SourcesTab from "./components/SourcesTab";
+import WeeklyTab from "./components/WeeklyTab";
+import IconRail from "./components/IconRail";
+import LibraryTab from "./components/LibraryTab";
+import ContactsTab from "./components/ContactsTab";
+import MetricsTab from "./components/MetricsTab";
+import DocumentsTab from "./components/DocumentsTab";
+import AutomationsTab from "./components/AutomationsTab";
+import RelationshipsTab from "./components/RelationshipsTab";
+import SettingsBadge from "./components/SettingsBadge";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -49,13 +60,38 @@ export default function Home() {
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [canvasTab, setCanvasTab] = useState<
-    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions"
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources" | "weekly" | "library" | "contacts" | "metrics" | "documents" | "automations" | "relationships"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const [attentionCount, setAttentionCount] = useState(0);
   const [companyCount, setCompanyCount] = useState(0);
   const [openActionCount, setOpenActionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [drawerWidth, setDrawerWidth] = useState(440);
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem("jh.assistantWidth"));
+    if (saved >= 320 && saved <= 760) setDrawerWidth(saved);
+  }, []);
+
+  const startDrawerResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const onMove = (ev: PointerEvent) => {
+      const w = Math.min(Math.max(window.innerWidth - ev.clientX, 320), Math.min(760, window.innerWidth * 0.92));
+      setDrawerWidth(w);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      setDrawerWidth((w) => {
+        localStorage.setItem("jh.assistantWidth", String(Math.round(w)));
+        return w;
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, []);
 
   const refreshCanvas = useCallback(async () => {
     try {
@@ -145,6 +181,7 @@ export default function Home() {
   );
 
   const send = useCallback(async () => {
+    setAssistantOpen(true);
     const prompt = input.trim();
     if (!prompt) return;
     setInput("");
@@ -153,6 +190,7 @@ export default function Home() {
 
   const invoke = useCallback(
     async (cap: Capability) => {
+      setAssistantOpen(true);
       const text = input.trim();
       if (cap.requires_input && !text) {
         setItems((prev) => [
@@ -177,19 +215,156 @@ export default function Home() {
   );
 
   return (
-    <main className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b bg-white px-4 py-3">
-        <h1 className="text-lg font-semibold">Opportunity Hunter</h1>
-        <SettingsBadge settings={settings} onSaved={setSettings} />
+    <main className="flex h-screen flex-col bg-bg text-ink">
+      <header className="flex h-[68px] flex-none items-center justify-between gap-5 border-b border-line bg-bg px-7">
+        <div className="min-w-0">
+          <div className="text-[21px] font-bold tracking-tight text-ink">Good morning</div>
+          <div className="mt-0.5 text-[13px] text-ink-muted">
+            Your hunt ·{" "}
+            <span className="font-semibold text-error">{attentionCount} decisions</span> need you today
+          </div>
+        </div>
+        <div className="flex flex-none items-center gap-3">
+          <SettingsBadge settings={settings} onSaved={setSettings} />
+          <button
+            onClick={() => setCanvasTab("board")}
+            className="flex items-center gap-1.5 rounded-md bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white shadow-accent transition hover:bg-accent-ink"
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M7.5 3v9M3 7.5h9"/></svg>
+            Add job
+          </button>
+        </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        {/* Chat pane */}
-        <section className="flex min-h-0 flex-1 flex-col border-r">
+      <div className="flex min-h-0 flex-1">
+        <IconRail active={canvasTab} onSelect={(t) => setCanvasTab(t as typeof canvasTab)} />
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* Canvas pane — now full width (unchanged inner content) */}
+          <section className="flex min-h-0 flex-1 flex-col bg-white">
+            {canvasTab === "profile" ? (
+              <ProfileTab />
+            ) : canvasTab === "applications" ? (
+              <ApplicationsTab />
+            ) : canvasTab === "briefing" ? (
+              <BriefingTab opportunityId={selectedOpp} />
+            ) : canvasTab === "detail" ? (
+              <OpportunityDetailTab opportunityId={selectedOpp} onBack={() => setCanvasTab("board")} />
+            ) : canvasTab === "board" ? (
+              <BoardTab
+                onOpen={(id) => {
+                  setSelectedOpp(id);
+                  setCanvasTab("detail");
+                }}
+              />
+            ) : canvasTab === "attention" ? (
+              <AttentionTab
+                onOpen={(id) => {
+                  setSelectedOpp(id);
+                  setCanvasTab("detail");
+                }}
+              />
+            ) : canvasTab === "companies" ? (
+              <CompaniesTab
+                onOpen={(id) => {
+                  setSelectedOpp(id);
+                  setCanvasTab("detail");
+                }}
+              />
+            ) : canvasTab === "actions" ? (
+              <ActionsTab
+                onOpen={(id) => {
+                  setSelectedOpp(id);
+                  setCanvasTab("detail");
+                }}
+              />
+            ) : canvasTab === "interviews" ? (
+              <InterviewsTab
+                onOpen={(id) => {
+                  setSelectedOpp(id);
+                  setCanvasTab("detail");
+                }}
+              />
+            ) : canvasTab === "sources" ? (
+              <SourcesTab />
+            ) : canvasTab === "weekly" ? (
+              <WeeklyTab
+                onOpen={(id) => {
+                  setSelectedOpp(id);
+                  setCanvasTab("detail");
+                }}
+              />
+            ) : canvasTab === "library" ? (
+              <LibraryTab />
+            ) : canvasTab === "contacts" ? (
+              <ContactsTab onOpen={(id) => { setSelectedOpp(id); setCanvasTab("detail"); }} />
+            ) : canvasTab === "metrics" ? (
+              <MetricsTab />
+            ) : canvasTab === "documents" ? (
+              <DocumentsTab />
+            ) : canvasTab === "automations" ? (
+              <AutomationsTab onNavigate={(t) => setCanvasTab(t as typeof canvasTab)} />
+            ) : canvasTab === "relationships" ? (
+              <RelationshipsTab onOpen={(id) => { setSelectedOpp(id); setCanvasTab("detail"); }} />
+            ) : (
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                {artifacts.length === 0 && notes.length === 0 && (
+                  <p className="text-sm text-slate-400">
+                    Artifacts and notes the agent saves will appear here.
+                  </p>
+                )}
+                {artifacts.map((a) => (
+                  <ArtifactCard key={`a-${a.id}`} artifact={a} onChanged={refreshCanvas} />
+                ))}
+                {notes.map((n) => (
+                  <article key={`n-${n.id}`} className="rounded border bg-slate-50 p-3">
+                    <h3 className="text-sm font-semibold">{n.title}</h3>
+                    <MarkdownView className="mt-1" text={n.body} />
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Edge launcher (visible when the drawer is closed) */}
+        {!assistantOpen && (
+          <button
+            onClick={() => setAssistantOpen(true)}
+            title="Assistant"
+            className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-l-md bg-accent py-3 pl-3 pr-2.5 text-white shadow-accent transition hover:bg-accent-ink"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h10v7H8l-3 3v-3H4z"/></svg>
+            <span className="text-[11px] font-semibold [writing-mode:vertical-rl]">Assistant</span>
+          </button>
+        )}
+
+        {/* Assistant drawer (right edge) — resizable via the left-edge handle */}
+        <aside
+          style={{ width: drawerWidth }}
+          className={`fixed top-0 right-0 z-40 flex h-full max-w-[92vw] flex-col border-l border-line bg-surface shadow-card transition-transform duration-200 ${
+            assistantOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {/* drag-to-resize handle (left edge) */}
+          <div
+            onPointerDown={startDrawerResize}
+            title="Drag to resize"
+            className="absolute left-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize hover:bg-accent/40"
+          />
+          <div className="flex flex-none items-center justify-between border-b border-line px-4 py-3">
+            <span className="text-[13.5px] font-semibold text-ink">Assistant</span>
+            <button
+              onClick={() => setAssistantOpen(false)}
+              title="Close"
+              className="flex h-7 w-7 items-center justify-center rounded-sm text-ink-muted transition hover:bg-surface-sunk"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+            </button>
+          </div>
           {/* Capability bar */}
-          <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-alt px-3 py-2">
             <select
-              className="rounded border px-2 py-1 text-xs"
+              className="rounded-sm border border-line px-2 py-1 text-xs"
               value={selectedOpp}
               onChange={(e) => setSelectedOpp(e.target.value)}
             >
@@ -204,7 +379,7 @@ export default function Home() {
               <button
                 key={c.name}
                 title={c.description}
-                className="rounded bg-slate-200 px-2 py-1 text-xs font-medium text-slate-800 hover:bg-slate-300 disabled:opacity-40"
+                className="rounded-sm border border-line bg-surface px-2.5 py-1 text-[11.5px] font-medium text-ink transition hover:bg-surface-sunk disabled:opacity-40"
                 onClick={() => invoke(c)}
                 disabled={running || (c.requires_opportunity && !selectedOpp)}
               >
@@ -225,9 +400,9 @@ export default function Home() {
               <Bubble key={i} item={it} />
             ))}
           </div>
-          <div className="flex gap-2 border-t bg-white p-3">
+          <div className="flex gap-2 border-t border-line bg-white p-3">
             <input
-              className="flex-1 rounded border px-3 py-2 text-sm"
+              className="flex-1 rounded-sm border border-line px-3 py-2 text-[12.5px] focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               placeholder="Message the agent…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -235,164 +410,14 @@ export default function Home() {
               disabled={running}
             />
             <button
-              className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-sm bg-accent px-4 py-2 text-[12.5px] font-medium text-white transition hover:bg-accent-ink disabled:opacity-50"
               onClick={send}
               disabled={running || !input.trim()}
             >
               {running ? "…" : "Send"}
             </button>
           </div>
-        </section>
-
-        {/* Canvas pane */}
-        <section className="flex min-h-0 flex-1 flex-col bg-white">
-          <div className="flex gap-4 border-b px-4 text-sm font-medium">
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "workspace"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("workspace")}
-            >
-              Workspace — Artifacts ({artifacts.length}) · Notes ({notes.length})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "profile"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("profile")}
-            >
-              Profile
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "applications"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("applications")}
-            >
-              Applications ({applications.length})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "briefing"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("briefing")}
-            >
-              Briefing
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "detail"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("detail")}
-            >
-              Detail
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "board"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("board")}
-            >
-              Board ({opps.length})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "attention"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("attention")}
-            >
-              Attention ({attentionCount})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "companies"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("companies")}
-            >
-              Companies ({companyCount})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "actions"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("actions")}
-            >
-              Actions ({openActionCount})
-            </button>
-          </div>
-          {canvasTab === "profile" ? (
-            <ProfileTab />
-          ) : canvasTab === "applications" ? (
-            <ApplicationsTab />
-          ) : canvasTab === "briefing" ? (
-            <BriefingTab opportunityId={selectedOpp} />
-          ) : canvasTab === "detail" ? (
-            <OpportunityDetailTab opportunityId={selectedOpp} />
-          ) : canvasTab === "board" ? (
-            <BoardTab
-              onOpen={(id) => {
-                setSelectedOpp(id);
-                setCanvasTab("detail");
-              }}
-            />
-          ) : canvasTab === "attention" ? (
-            <AttentionTab
-              onOpen={(id) => {
-                setSelectedOpp(id);
-                setCanvasTab("detail");
-              }}
-            />
-          ) : canvasTab === "companies" ? (
-            <CompaniesTab
-              onOpen={(id) => {
-                setSelectedOpp(id);
-                setCanvasTab("detail");
-              }}
-            />
-          ) : canvasTab === "actions" ? (
-            <ActionsTab
-              onOpen={(id) => {
-                setSelectedOpp(id);
-                setCanvasTab("detail");
-              }}
-            />
-          ) : (
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-              {artifacts.length === 0 && notes.length === 0 && (
-                <p className="text-sm text-slate-400">
-                  Artifacts and notes the agent saves will appear here.
-                </p>
-              )}
-              {artifacts.map((a) => (
-                <ArtifactCard key={`a-${a.id}`} artifact={a} onChanged={refreshCanvas} />
-              ))}
-              {notes.map((n) => (
-                <article key={`n-${n.id}`} className="rounded border bg-slate-50 p-3">
-                  <h3 className="text-sm font-semibold">{n.title}</h3>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{n.body}</p>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        </aside>
       </div>
     </main>
   );
@@ -401,7 +426,7 @@ export default function Home() {
 function Bubble({ item }: { item: ChatItem }) {
   if (item.kind === "user") {
     return (
-      <div className="ml-auto max-w-[85%] rounded-lg bg-slate-900 px-3 py-2 text-sm text-white">
+      <div className="ml-auto max-w-[85%] rounded-lg bg-accent px-3 py-2 text-sm text-white">
         {item.text}
       </div>
     );
@@ -424,79 +449,3 @@ function Bubble({ item }: { item: ChatItem }) {
   );
 }
 
-function SettingsBadge({
-  settings,
-  onSaved,
-}: {
-  settings: SettingsView | null;
-  onSaved: (s: SettingsView) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [key, setKey] = useState("");
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [model, setModel] = useState("");
-  const configured = settings?.anthropic_key_configured;
-
-  const save = async () => {
-    const body: Record<string, string> = {};
-    if (key.trim()) body.anthropic_api_key = key.trim();
-    if (openaiKey.trim()) body.openai_api_key = openaiKey.trim();
-    if (model.trim()) body.agent_model = model.trim();
-    const updated = await updateSettings(body);
-    onSaved(updated);
-    setKey("");
-    setOpenaiKey("");
-    setOpen(false);
-  };
-
-  return (
-    <div className="relative">
-      <button
-        className={`rounded px-3 py-1 text-xs font-medium ${
-          configured ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-        }`}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {configured ? `✓ ${settings?.agent_model}` : "⚠ Configure API key"}
-      </button>
-      {open && (
-        <div className="absolute right-0 z-10 mt-2 w-80 space-y-2 rounded border bg-white p-3 shadow">
-          <label className="block text-xs font-medium text-slate-600">Anthropic API key</label>
-          <input
-            type="password"
-            className="w-full rounded border px-2 py-1 text-sm"
-            placeholder={configured ? "••••• (set)" : "sk-ant-…"}
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-          <label className="block text-xs font-medium text-slate-600">
-            OpenAI API key (embeddings)
-          </label>
-          <input
-            type="password"
-            className="w-full rounded border px-2 py-1 text-sm"
-            placeholder={settings?.openai_key_configured ? "••••• (set)" : "sk-…"}
-            value={openaiKey}
-            onChange={(e) => setOpenaiKey(e.target.value)}
-          />
-          <label className="block text-xs font-medium text-slate-600">Agent model</label>
-          <input
-            className="w-full rounded border px-2 py-1 text-sm"
-            placeholder={settings?.agent_model ?? "claude-sonnet-4-6"}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-          />
-          <button
-            className="w-full rounded bg-slate-900 py-1.5 text-sm font-medium text-white"
-            onClick={save}
-          >
-            Save
-          </button>
-          <p className="text-[11px] text-slate-400">
-            Stored locally. If left blank, the local Claude CLI&rsquo;s own auth is used.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}

@@ -17,6 +17,7 @@ from app.models import (
     STAGE_ORDER,
     Action,
     ActionStatus,
+    CommDirection,
     Communication,
     Opportunity,
     PipelineStage,
@@ -142,6 +143,26 @@ def needs_attention(session: Session) -> dict[str, Any]:
             }
         )
 
+    untriaged_messages = session.exec(
+        select(Communication).where(
+            Communication.direction == CommDirection.inbound,
+            Communication.opportunity_id.is_(None),
+        )
+    ).all()
+    for c in untriaged_messages:
+        items.append(
+            {
+                "kind": "untriaged_message",
+                "severity": "medium",
+                "communication_id": c.id,
+                "opportunity_id": None,
+                "title": c.subject or f"{c.channel.value} message",
+                "channel": c.channel.value,
+                "occurred_at": c.occurred_at.isoformat(),
+                "reason": "Inbound message not yet linked to an opportunity",
+            }
+        )
+
     return {
         "items": items,
         "counts": {
@@ -149,6 +170,7 @@ def needs_attention(session: Session) -> dict[str, Any]:
             "stale_opportunities": len(stale),
             "untriaged_opportunities": len(untriaged),
             "overdue_followups": len(overdue_followups),
+            "untriaged_messages": len(untriaged_messages),
             "total": len(items),
         },
     }

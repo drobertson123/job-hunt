@@ -32,9 +32,9 @@ from claude_agent_sdk import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from claude_agent_sdk import query as sdk_query
 from sqlmodel import Session
 
+import app.agent.session as _session_mod
 from app.agent.tools import (
     ALL_TOOL_NAMES,
     MCP_SERVER_NAME,
@@ -108,6 +108,12 @@ def build_options(*, model: str | None, cwd: Path, api_key: str | None) -> Claud
     )
 
 
+async def live_query(*, prompt: Any, options: ClaudeAgentOptions) -> AsyncIterator[Any]:
+    """Default query_fn: route the turn through the process-wide persistent session."""
+    async for msg in _session_mod.get_session().run(prompt=prompt, options=options):
+        yield msg
+
+
 def _persist(run_id: str, seq: int, etype: EventType, content: str = "") -> None:
     with Session(engine) as session:
         session.add(Event(run_id=run_id, seq=seq, type=etype, content=content))
@@ -150,7 +156,7 @@ async def stream_run(
     model: str | None = None,
     api_key: str | None = None,
     run: Run | None = None,
-    query_fn: Callable[..., AsyncIterator[Any]] = sdk_query,
+    query_fn: Callable[..., AsyncIterator[Any]] = live_query,
 ) -> AsyncIterator[dict[str, Any]]:
     """Run an agent query, persisting + yielding each event as a dict."""
     if run is None:
@@ -172,30 +178,36 @@ async def stream_run(
 
     try:
         options = build_options(model=model, cwd=cwd, api_key=api_key)
-        async for message in query_fn(prompt=_as_stream(prompt), options=options):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        if block.text:
-                            yield emit(EventType.token, block.text)
-                    elif isinstance(block, ToolUseBlock):
-                        yield emit(
-                            EventType.tool_use,
-                            json.dumps({"name": block.name, "input": block.input}),
-                        )
-                    elif isinstance(block, ToolResultBlock):
-                        content = block.content
-                        text = content if isinstance(content, str) else json.dumps(content)
-                        yield emit(EventType.tool_result, text or "")
-            elif isinstance(message, ResultMessage):
-                payload = {
-                    "result": message.result,
-                    "is_error": message.is_error,
-                    "total_cost_usd": message.total_cost_usd,
-                    "num_turns": message.num_turns,
-                }
-                yield emit(EventType.result, json.dumps(payload))
-                break  # one-shot: stop after the turn completes (streaming-input mode)
+        agen = query_fn(prompt=_as_stream(prompt), options=options)
+        try:
+            async for message in agen:
+                if isinstance(message, AssistantMessage):
+                    for block in message.content:
+                        if isinstance(block, TextBlock):
+                            if block.text:
+                                yield emit(EventType.token, block.text)
+                        elif isinstance(block, ToolUseBlock):
+                            yield emit(
+                                EventType.tool_use,
+                                json.dumps({"name": block.name, "input": block.input}),
+                            )
+                        elif isinstance(block, ToolResultBlock):
+                            content = block.content
+                            text = content if isinstance(content, str) else json.dumps(content)
+                            yield emit(EventType.tool_result, text or "")
+                elif isinstance(message, ResultMessage):
+                    payload = {
+                        "result": message.result,
+                        "is_error": message.is_error,
+                        "total_cost_usd": message.total_cost_usd,
+                        "num_turns": message.num_turns,
+                    }
+                    yield emit(EventType.result, json.dumps(payload))
+                    break  # one-shot: stop after the turn completes (streaming-input mode)
+        finally:
+            aclose = getattr(agen, "aclose", None)
+            if aclose is not None:
+                await aclose()
         # Review gate: auto-check generative artifacts created by this run
         # (best-effort; never fails or hangs the run). to_thread because the
         # embedder is a blocking network call; wait_for bounds it. Applies to

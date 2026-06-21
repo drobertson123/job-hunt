@@ -27,25 +27,42 @@ from app.routers import (
     communications,
     companies,
     contacts,
+    content,
     corpus,
+    google,
     health,
+    interviews,
     job_sources,
+    metrics,
     notes,
     opportunities,
+    relationships,
     runs,
     settings,
+    weekly,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    yield
+    from app.agent.session import get_session
+
+    await get_session().start_keepalive()
+    from app.search_scheduler import get_scheduler
+
+    await get_scheduler().start()
+    try:
+        yield
+    finally:
+        await get_session().stop()
+        await get_scheduler().stop()
 
 
 app = FastAPI(title="Opportunity Hunter", version=__version__, lifespan=lifespan)
 
 app.include_router(health.router)
+app.include_router(google.router)
 app.include_router(job_sources.router)
 app.include_router(settings.router)
 app.include_router(chat.router)
@@ -62,6 +79,11 @@ app.include_router(companies.router)
 app.include_router(artifacts.router)
 app.include_router(attention.router)
 app.include_router(corpus.router)
+app.include_router(interviews.router)
+app.include_router(weekly.router)
+app.include_router(content.router)
+app.include_router(metrics.router)
+app.include_router(relationships.router)
 
 # Serve the built frontend (static export) at / when it exists. Mounted last so
 # /api/* routes take precedence. html=True serves index.html for the SPA root.

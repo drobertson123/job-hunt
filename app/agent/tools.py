@@ -29,7 +29,9 @@ from app.models import (
     CommChannel,
     CommDirection,
     CompanySize,
+    ContentBlockKind,
     DecisionKind,
+    InterviewKind,
     JobSourceKind,
     Note,
     OpportunityType,
@@ -372,6 +374,44 @@ async def record_communication(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "schedule_interview",
+    "Schedule an interview event for an opportunity (date/time, type, location/link).",
+    {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "starts_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "opportunity_id": {"type": "string"},
+            "kind": {
+                "type": "string",
+                "enum": ["phone", "video", "onsite", "technical", "behavioral", "final", "other"],
+            },
+            "ends_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "location": {"type": "string"},
+            "notes": {"type": "string"},
+        },
+        "required": ["title", "starts_at"],
+    },
+)
+async def schedule_interview(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        starts = _parse_dt(args.get("starts_at"))
+        if starts is None:
+            return _ok("Could not schedule interview: starts_at (ISO 8601) is required.")
+        ev = services.add_interview(
+            s,
+            title=args.get("title") or "Interview",
+            starts_at=starts,
+            opportunity_id=args.get("opportunity_id"),
+            kind=_enum(InterviewKind, args.get("kind"), InterviewKind.other),
+            ends_at=_parse_dt(args.get("ends_at")),
+            location=args.get("location") or "",
+            notes=args.get("notes") or "",
+        )
+        return _ok(f"Scheduled interview #{ev.id}: {ev.title!r} at {ev.starts_at.isoformat()}.")
+
+
+@tool(
     "synthesize_briefing",
     "Synthesize a structured briefing (salary, remote, tech stack, why-fit, "
     "concerns, ...) for an opportunity, grounded in its data and the user's corpus.",
@@ -491,6 +531,33 @@ async def record_decision(args: dict[str, Any]) -> dict[str, Any]:
         return _ok(f"Recorded decision #{d.id}.")
 
 
+@tool(
+    "save_content_block",
+    "Save a reusable career content block (headline, summary, or achievement bullet) to the library.",
+    {
+        "type": "object",
+        "properties": {
+            "text": {"type": "string"},
+            "kind": {"type": "string", "enum": ["headline", "summary", "bullet", "other"]},
+            "audience": {"type": "string", "description": "positioning tag, e.g. technical / leadership"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["text"],
+    },
+)
+async def save_content_block(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        block = services.add_content_block(
+            s,
+            kind=_enum(ContentBlockKind, args.get("kind"), ContentBlockKind.bullet),
+            text=args.get("text") or "",
+            audience=args.get("audience") or "",
+            tags=args.get("tags") or [],
+            provenance="career-pack:content-library",
+        )
+        return _ok(f"Saved content block #{block.id} ({block.kind.value}).")
+
+
 def _corpus_embedder(session: Session):
     """Indirection point: tests monkeypatch this to inject a fake embedder."""
     return corpus_service.default_embedder(session)
@@ -537,11 +604,13 @@ ALL_TOOLS = [
     record_company,
     record_job_source,
     record_communication,
+    schedule_interview,
     record_contact,
     synthesize_briefing,
     save_artifact,
     record_decision,
     search_corpus,
+    save_content_block,
 ]
 
 # Tool names the agent is allowed to call (mcp__app__*).

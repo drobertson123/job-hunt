@@ -29,8 +29,12 @@ from app.models import (
     Company,
     CompanySize,
     Contact,
+    ContentBlock,
+    ContentBlockKind,
     Decision,
     DecisionKind,
+    InterviewEvent,
+    InterviewKind,
     JobSource,
     JobSourceKind,
     Opportunity,
@@ -515,6 +519,7 @@ def add_contact(
     opportunity_id: str | None = None,
     role: str | None = None,
     organization: str | None = None,
+    email: str | None = None,
     company_id: str | None = None,
     link: str | None = None,
     notes: str = "",
@@ -528,6 +533,7 @@ def add_contact(
     row.opportunity_id = opportunity_id
     row.role = role
     row.organization = organization
+    row.email = email
     row.company_id = company_id
     row.link = link
     row.notes = notes
@@ -561,6 +567,7 @@ def upsert_job_source(
     kind: JobSourceKind | None = None,
     url: str | None = None,
     saved_query: str | None = None,
+    auto_search: bool | None = None,
     notes: str | None = None,
     referrer_contact_id: int | None = None,
     last_checked_at: datetime | None = None,
@@ -581,6 +588,8 @@ def upsert_job_source(
         row.url = url
     if saved_query is not None:
         row.saved_query = saved_query
+    if auto_search is not None:
+        row.auto_search = auto_search
     if notes is not None:
         row.notes = notes
     if referrer_contact_id is not None:
@@ -602,3 +611,95 @@ def upsert_job_source(
 
 def list_job_sources(session: Session) -> list[JobSource]:
     return list(session.exec(select(JobSource).order_by(func.lower(JobSource.name))).all())
+
+
+# --- Interviews ----------------------------------------------------------- #
+
+
+def add_interview(
+    session: Session,
+    *,
+    title: str,
+    starts_at: datetime,
+    opportunity_id: str | None = None,
+    kind: InterviewKind = InterviewKind.other,
+    ends_at: datetime | None = None,
+    location: str = "",
+    notes: str = "",
+) -> InterviewEvent:
+    ev = InterviewEvent(
+        title=title,
+        starts_at=starts_at,
+        opportunity_id=opportunity_id,
+        kind=kind,
+        ends_at=ends_at,
+        location=location,
+        notes=notes,
+    )
+    session.add(ev)
+    if opportunity_id:
+        opp = session.get(Opportunity, opportunity_id)
+        if opp:
+            opp.last_activity_at = _utcnow()
+            session.add(opp)
+    session.commit()
+    session.refresh(ev)
+    return ev
+
+
+def list_interviews(
+    session: Session,
+    *,
+    opportunity_id: str | None = None,
+    upcoming: bool = False,
+) -> list[InterviewEvent]:
+    stmt = select(InterviewEvent)
+    if opportunity_id is not None:
+        stmt = stmt.where(InterviewEvent.opportunity_id == opportunity_id)
+    if upcoming:
+        stmt = stmt.where(InterviewEvent.starts_at >= _utcnow())
+    return list(session.exec(stmt.order_by(InterviewEvent.starts_at)).all())
+
+
+def delete_interview(session: Session, interview_id: int) -> bool:
+    ev = session.get(InterviewEvent, interview_id)
+    if ev is None:
+        return False
+    session.delete(ev)
+    session.commit()
+    return True
+
+
+# --- Content Blocks ------------------------------------------------------- #
+
+
+def add_content_block(
+    session: Session,
+    *,
+    kind: ContentBlockKind = ContentBlockKind.bullet,
+    text: str,
+    audience: str = "",
+    tags: list[str] | None = None,
+    provenance: str | None = None,
+) -> ContentBlock:
+    block = ContentBlock(kind=kind, text=text, audience=audience, tags=tags or [], provenance=provenance)
+    session.add(block)
+    session.commit()
+    session.refresh(block)
+    return block
+
+
+def list_content_blocks(session: Session, *, kind: ContentBlockKind | None = None) -> list[ContentBlock]:
+    stmt = select(ContentBlock)
+    if kind is not None:
+        stmt = stmt.where(ContentBlock.kind == kind)
+    return list(session.exec(stmt.order_by(ContentBlock.created_at.desc())).all())
+
+
+def delete_content_block(session: Session, block_id: int) -> bool:
+    block = session.get(ContentBlock, block_id)
+    if block is None:
+        return False
+    session.delete(block)
+    session.commit()
+    return True

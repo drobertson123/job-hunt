@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from app import corpus_service
 from app.db import get_session
 from app.models import Document, DocumentMediaType, DocumentSource, Profile
-from app.profile_service import synthesize_profile
+from app.profile_service import set_pinned_skills, set_preferences, synthesize_profile
 
 router = APIRouter(prefix="/api/corpus", tags=["corpus"])
 
@@ -121,3 +121,35 @@ async def synthesize(session: Session = Depends(get_session)) -> Profile:
 @router.get("/profile", response_model=Profile | None)
 def get_profile(session: Session = Depends(get_session)) -> Profile | None:
     return session.exec(select(Profile)).first()
+
+
+class ProfileUpdate(BaseModel):
+    pinned_skills: list[str] | None = None
+    dealbreakers: list[str] | None = None
+    must_haves: list[str] | None = None
+    nice_to_haves: list[str] | None = None
+
+
+@router.patch("/profile", response_model=Profile)
+def update_profile(
+    body: ProfileUpdate, session: Session = Depends(get_session)
+) -> Profile:
+    if body.pinned_skills is not None:
+        row = set_pinned_skills(session, body.pinned_skills)
+    if body.dealbreakers is not None or body.must_haves is not None or body.nice_to_haves is not None:
+        row = set_preferences(
+            session,
+            dealbreakers=body.dealbreakers,
+            must_haves=body.must_haves,
+            nice_to_haves=body.nice_to_haves,
+        )
+    # Fallback: return current profile (all fields may have been None)
+    if body.pinned_skills is None and body.dealbreakers is None and body.must_haves is None and body.nice_to_haves is None:
+        from sqlmodel import select as _select
+        row = session.exec(_select(Profile)).first()
+        if row is None:
+            row = Profile()
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+    return row

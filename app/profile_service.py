@@ -62,6 +62,53 @@ def _extract_json(text: str) -> str:
     return s
 
 
+def _clean_list(items: list[str]) -> list[str]:
+    out: list[str] = []
+    for s in items or []:
+        t = s.strip()
+        if t and t not in out:
+            out.append(t)
+    return out
+
+
+def set_preferences(
+    session: Session,
+    *,
+    dealbreakers: list[str] | None = None,
+    must_haves: list[str] | None = None,
+    nice_to_haves: list[str] | None = None,
+) -> Profile:
+    row = session.exec(select(Profile)).first()
+    if row is None:
+        row = Profile()
+    if dealbreakers is not None:
+        row.dealbreakers = _clean_list(dealbreakers)
+    if must_haves is not None:
+        row.must_haves = _clean_list(must_haves)
+    if nice_to_haves is not None:
+        row.nice_to_haves = _clean_list(nice_to_haves)
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def set_pinned_skills(session: Session, skills: list[str]) -> Profile:
+    cleaned: list[str] = []
+    for s in skills:
+        t = s.strip()
+        if t and t not in cleaned:
+            cleaned.append(t)
+    row = session.exec(select(Profile)).first()
+    if row is None:
+        row = Profile()
+    row.pinned_skills = cleaned
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
 async def synthesize_profile(
     session: Session,
     *,

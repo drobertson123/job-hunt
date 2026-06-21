@@ -104,3 +104,49 @@ async def test_stream_run_records_failure():
     run_id = events[0]["run_id"]
     with Session(engine) as s:
         assert s.get(Run, run_id).status == RunStatus.failed
+
+
+@pytest.mark.asyncio
+async def test_stream_run_closes_query_fn_generator():
+    """stream_run must aclose() the query_fn generator so the session lock releases."""
+    closed = {"v": False}
+
+    async def gen_query_fn(*, prompt, options):  # noqa: ARG001
+        try:
+            yield AssistantMessage(content=[TextBlock(text="hi")], model="fake-model")
+            yield ResultMessage(
+                subtype="success",
+                duration_ms=1,
+                duration_api_ms=1,
+                is_error=False,
+                num_turns=1,
+                session_id="sess",
+                result="ok",
+                total_cost_usd=0.0,
+            )
+        finally:
+            closed["v"] = True
+
+    events = [e async for e in runner.stream_run("hi", query_fn=gen_query_fn)]
+    assert closed["v"] is True
+    assert any(e["type"] == "result" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_stream_run_default_query_fn_uses_persistent_session(monkeypatch):
+    """With no query_fn injected, stream_run routes through the persistent session."""
+    import app.agent.runner as runner_mod
+
+    seen = {}
+
+    async def fake_session_run(*, prompt, options):
+        seen["called"] = True
+        yield  # no messages; just prove the path is taken
+
+    class FakeSession:
+        run = staticmethod(fake_session_run)
+
+    monkeypatch.setattr("app.agent.session.get_session", lambda: FakeSession())
+    events = [e async for e in runner_mod.stream_run("ping")]
+    assert seen.get("called") is True
+    assert any(e["type"] == "status" for e in events)

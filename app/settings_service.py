@@ -17,6 +17,10 @@ from app.models import Setting
 ANTHROPIC_API_KEY = "anthropic_api_key"
 OPENAI_API_KEY = "openai_api_key"
 AGENT_MODEL = "agent_model"
+GOOGLE_CLIENT_ID = "google_client_id"
+GOOGLE_CLIENT_SECRET = "google_client_secret"
+GOOGLE_OAUTH_TOKEN = "google_oauth_token"  # JSON blob
+GOOGLE_OAUTH_STATE = "google_oauth_state"
 
 
 def get_setting(session: Session, key: str) -> str | None:
@@ -49,3 +53,7 @@ def resolve_openai_key(session: Session) -> str | None:
 
 def resolve_agent_model(session: Session) -> str:
     return get_setting(session, AGENT_MODEL) or get_config().default_agent_model
+
+
+def resolve_google_client(session: Session) -> tuple[str | None, str | None]:
+    return (get_setting(session, GOOGLE_CLIENT_ID), get_setting(session, GOOGLE_CLIENT_SECRET))

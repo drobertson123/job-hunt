@@ -272,6 +272,8 @@ class Contact(SQLModel, table=True):
     organization: str | None = None
     company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
     link: str | None = None
+    email: str | None = None
+    google_resource_name: str | None = Field(default=None, index=True)
     notes: str = ""
     created_at: datetime = Field(default_factory=_utcnow)
 
@@ -329,6 +331,10 @@ class Profile(SQLModel, table=True):
     achievements: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     target_titles: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     locations: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    pinned_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    dealbreakers: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    must_haves: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    nice_to_haves: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     source_doc_count: int = 0
     synthesized_at: datetime = Field(default_factory=_utcnow)
 
@@ -336,6 +342,25 @@ class Profile(SQLModel, table=True):
 # --------------------------------------------------------------------------- #
 # Phase 2 slice C: grounding reports (anti-fabrication verifier output).
 # --------------------------------------------------------------------------- #
+
+
+class ContentBlockKind(str, Enum):
+    headline = "headline"
+    summary = "summary"
+    bullet = "bullet"
+    other = "other"
+
+
+class ContentBlock(SQLModel, table=True):
+    __tablename__ = "content_blocks"
+
+    id: int | None = Field(default=None, primary_key=True)
+    kind: ContentBlockKind = ContentBlockKind.bullet
+    audience: str = ""
+    text: str
+    tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    provenance: str | None = None
+    created_at: datetime = Field(default_factory=_utcnow)
 
 
 class GroundingReport(SQLModel, table=True):
@@ -415,6 +440,7 @@ class JobSource(SQLModel, table=True):
     kind: JobSourceKind = Field(default=JobSourceKind.other)
     url: str | None = None
     saved_query: str | None = None  # discovery-ready feed; not polled yet
+    auto_search: bool = False  # opt in to the daily scheduler
     last_checked_at: datetime | None = None
     referrer_contact_id: int | None = Field(
         default=None, foreign_key="contacts.id", index=True
@@ -460,6 +486,7 @@ class CommChannel(str, Enum):
     email = "email"
     sms = "sms"
     linkedin = "linkedin"
+    whatsapp = "whatsapp"
     phone = "phone"
     in_person = "in_person"
     other = "other"
@@ -480,7 +507,35 @@ class Communication(SQLModel, table=True):
     body: str = ""
     occurred_at: datetime = Field(default_factory=_utcnow, index=True)
     thread_key: str | None = Field(default=None, index=True)
+    external_id: str | None = Field(default=None, index=True)  # provider message id (dedup)
     follow_up_due_at: datetime | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+class InterviewKind(str, Enum):
+    phone = "phone"
+    video = "video"
+    onsite = "onsite"
+    technical = "technical"
+    behavioral = "behavioral"
+    final = "final"
+    other = "other"
+
+
+class InterviewEvent(SQLModel, table=True):
+    __tablename__ = "interview_events"
+
+    id: int | None = Field(default=None, primary_key=True)
+    opportunity_id: str | None = Field(
+        default=None, foreign_key="opportunities.id", index=True
+    )
+    title: str
+    kind: InterviewKind = InterviewKind.other
+    starts_at: datetime = Field(index=True)
+    ends_at: datetime | None = None
+    location: str = ""
+    notes: str = ""
+    gcal_event_id: str | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_utcnow)
 
 
