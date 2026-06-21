@@ -410,6 +410,7 @@ export type OpportunityDetail = {
   artifacts: Artifact[];
   decisions: Decision[];
   applications: Application[];
+  communications: Communication[];
   briefing: Briefing | null;
 };
 
@@ -467,6 +468,7 @@ export type Attention = {
     overdue_actions: number;
     stale_opportunities: number;
     untriaged_opportunities: number;
+    overdue_followups: number;
     total: number;
   };
 };
@@ -474,5 +476,29 @@ export type Attention = {
 export async function fetchAttention(): Promise<Attention> {
   const res = await fetch("/api/attention");
   if (!res.ok) throw new Error(`attention failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- communications (spec: comms-log) -----
+
+export type Communication = {
+  id: number;
+  opportunity_id: string | null;
+  contact_id: number | null;
+  company_id: string | null;
+  direction: string;
+  channel: string;
+  subject: string;
+  body: string;
+  occurred_at: string;
+  thread_key: string | null;
+  follow_up_due_at: string | null;
+  created_at: string;
+};
+
+export async function fetchCommunications(oppId?: string): Promise<Communication[]> {
+  const qs = oppId ? `?opportunity_id=${oppId}` : "";
+  const res = await fetch(`/api/communications${qs}`);
+  if (!res.ok) throw new Error(`communications failed: ${res.status}`);
   return res.json();
 }
