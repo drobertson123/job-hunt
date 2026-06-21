@@ -462,6 +462,7 @@ class CommChannel(str, Enum):
     email = "email"
     sms = "sms"
     linkedin = "linkedin"
+    whatsapp = "whatsapp"
     phone = "phone"
     in_person = "in_person"
     other = "other"

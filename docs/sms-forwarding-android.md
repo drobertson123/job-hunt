@@ -64,6 +64,20 @@ curl -X POST http://<tailscale-ip>:8000/api/communications/sms \
 It should return the created communication, and the message appears under
 **Attention → Untriaged messages**.
 
+## Other channels (WhatsApp, LinkedIn, …) via notification forwarding
+
+Android notification-listener automations (MacroDroid: *Notification Received*;
+Tasker: *Notification* event) can capture WhatsApp / LinkedIn message previews
+and POST them to the general endpoint:
+
+    POST http://<tailscale-ip>:8000/api/communications/inbound
+    { "from": "<sender or app>", "body": "<notification text>", "channel": "whatsapp" }
+
+`channel` is one of `whatsapp · linkedin · sms · email · phone · other`. These are
+notification *previews* (often truncated), not full threads — but they land in
+**Attention → Untriaged messages** for triage like any inbound message. The same
+optional `X-SMS-Token` / `?token=` applies.
+
 ## Note on iPhone
 
 iOS gives apps no way to read incoming texts automatically. On iPhone, use the
