@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -43,6 +43,11 @@ def inbound_sms(
     expected = get_config().sms_webhook_token
     if expected and (x_sms_token or token) != expected:
         raise HTTPException(status_code=401, detail="invalid sms token")
+    # Normalize tz-aware timestamps to naive UTC (the schema's convention);
+    # a forwarder sending a local-offset time is converted, not just truncated.
+    occurred_at = payload.received_at
+    if occurred_at is not None and occurred_at.tzinfo is not None:
+        occurred_at = occurred_at.astimezone(timezone.utc).replace(tzinfo=None)
     return services.record_communication(
         session,
         direction=CommDirection.inbound,
@@ -50,6 +55,6 @@ def inbound_sms(
         opportunity_id=payload.opportunity_id,
         subject=f"SMS from {payload.sender}",
         body=payload.body,
-        occurred_at=payload.received_at.replace(tzinfo=None) if payload.received_at else None,
+        occurred_at=occurred_at,
         thread_key=payload.sender,
     )

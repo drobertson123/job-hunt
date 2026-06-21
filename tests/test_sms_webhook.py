@@ -36,3 +36,13 @@ def test_sms_webhook_token_enforced_when_set(client, monkeypatch):
         json={"from": "+1", "body": "x"},
         headers={"X-SMS-Token": "s3cret"},
     ).status_code == 200
+
+
+def test_sms_webhook_converts_offset_timestamp_to_utc(client):
+    # +05:00 local time → stored as naive UTC (05:00 earlier), not truncated
+    r = client.post(
+        "/api/communications/sms",
+        json={"from": "+1", "body": "x", "received_at": "2026-06-21T10:00:00+05:00"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["occurred_at"].startswith("2026-06-21T05:00:00")
