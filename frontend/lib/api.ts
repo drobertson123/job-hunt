@@ -320,6 +320,12 @@ export async function getProfile(): Promise<Profile | null> {
   return res.json(); // server returns JSON null when no profile exists
 }
 
+export async function fetchProfile(): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile");
+  if (!res.ok) throw new Error(`profile failed: ${res.status}`);
+  return res.json();
+}
+
 export async function updatePinnedSkills(skills: string[]): Promise<Profile> {
   const res = await fetch("/api/corpus/profile", {
     method: "PATCH",
