@@ -476,3 +476,49 @@ def backfill_company_ids(session: Session) -> dict[str, int]:
         "contacts_linked": contacts_linked,
         "companies": total,
     }
+
+
+# --- Contacts ------------------------------------------------------------ #
+
+
+def add_contact(
+    session: Session,
+    *,
+    name: str,
+    opportunity_id: str | None = None,
+    role: str | None = None,
+    organization: str | None = None,
+    company_id: str | None = None,
+    link: str | None = None,
+    notes: str = "",
+    contact_id: int | None = None,
+) -> Contact:
+    row = session.get(Contact, contact_id) if contact_id else None
+    if row is None:
+        row = Contact(name=name)
+    # ponytail: overwrite from args (caller sends intended state).
+    row.name = name
+    row.opportunity_id = opportunity_id
+    row.role = role
+    row.organization = organization
+    row.company_id = company_id
+    row.link = link
+    row.notes = notes
+    session.add(row)
+    if opportunity_id:
+        opp = session.get(Opportunity, opportunity_id)
+        if opp:
+            opp.last_activity_at = _utcnow()
+            session.add(opp)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def list_contacts(
+    session: Session, opportunity_id: str | None = None
+) -> list[Contact]:
+    q = select(Contact)
+    if opportunity_id:
+        q = q.where(Contact.opportunity_id == opportunity_id)
+    return list(session.exec(q.order_by(Contact.created_at.desc())).all())
