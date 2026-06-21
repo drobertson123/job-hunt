@@ -32,9 +32,9 @@ from claude_agent_sdk import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from claude_agent_sdk import query as sdk_query
 from sqlmodel import Session
 
+import app.agent.session as _session_mod
 from app.agent.tools import (
     ALL_TOOL_NAMES,
     MCP_SERVER_NAME,
@@ -108,6 +108,12 @@ def build_options(*, model: str | None, cwd: Path, api_key: str | None) -> Claud
     )
 
 
+async def live_query(*, prompt: Any, options: ClaudeAgentOptions) -> AsyncIterator[Any]:
+    """Default query_fn: route the turn through the process-wide persistent session."""
+    async for msg in _session_mod.get_session().run(prompt=prompt, options=options):
+        yield msg
+
+
 def _persist(run_id: str, seq: int, etype: EventType, content: str = "") -> None:
     with Session(engine) as session:
         session.add(Event(run_id=run_id, seq=seq, type=etype, content=content))
@@ -150,7 +156,7 @@ async def stream_run(
     model: str | None = None,
     api_key: str | None = None,
     run: Run | None = None,
-    query_fn: Callable[..., AsyncIterator[Any]] = sdk_query,
+    query_fn: Callable[..., AsyncIterator[Any]] = live_query,
 ) -> AsyncIterator[dict[str, Any]]:
     """Run an agent query, persisting + yielding each event as a dict."""
     if run is None:

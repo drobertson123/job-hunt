@@ -40,7 +40,13 @@ from app.routers import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    yield
+    from app.agent.session import get_session
+
+    await get_session().start_keepalive()
+    try:
+        yield
+    finally:
+        await get_session().stop()
 
 
 app = FastAPI(title="Opportunity Hunter", version=__version__, lifespan=lifespan)

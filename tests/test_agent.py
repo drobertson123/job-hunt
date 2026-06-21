@@ -104,3 +104,23 @@ async def test_stream_run_records_failure():
     run_id = events[0]["run_id"]
     with Session(engine) as s:
         assert s.get(Run, run_id).status == RunStatus.failed
+
+
+@pytest.mark.asyncio
+async def test_stream_run_default_query_fn_uses_persistent_session(monkeypatch):
+    """With no query_fn injected, stream_run routes through the persistent session."""
+    import app.agent.runner as runner_mod
+
+    seen = {}
+
+    async def fake_session_run(*, prompt, options):
+        seen["called"] = True
+        yield  # no messages; just prove the path is taken
+
+    class FakeSession:
+        run = staticmethod(fake_session_run)
+
+    monkeypatch.setattr("app.agent.session.get_session", lambda: FakeSession())
+    events = [e async for e in runner_mod.stream_run("ping")]
+    assert seen.get("called") is True
+    assert any(e["type"] == "status" for e in events)
