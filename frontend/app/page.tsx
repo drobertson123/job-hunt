@@ -20,7 +20,6 @@ import {
   getSettings,
   invokeCapability,
   streamChat,
-  updateSettings,
 } from "@/lib/api";
 import ProfileTab from "./components/ProfileTab";
 import ApplicationsTab from "./components/ApplicationsTab";
@@ -36,6 +35,7 @@ import InterviewsTab from "./components/InterviewsTab";
 import SourcesTab from "./components/SourcesTab";
 import WeeklyTab from "./components/WeeklyTab";
 import LeftNav from "./components/LeftNav";
+import SettingsBadge from "./components/SettingsBadge";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -386,79 +386,3 @@ function Bubble({ item }: { item: ChatItem }) {
   );
 }
 
-function SettingsBadge({
-  settings,
-  onSaved,
-}: {
-  settings: SettingsView | null;
-  onSaved: (s: SettingsView) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [key, setKey] = useState("");
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [model, setModel] = useState("");
-  const configured = settings?.anthropic_key_configured;
-
-  const save = async () => {
-    const body: Record<string, string> = {};
-    if (key.trim()) body.anthropic_api_key = key.trim();
-    if (openaiKey.trim()) body.openai_api_key = openaiKey.trim();
-    if (model.trim()) body.agent_model = model.trim();
-    const updated = await updateSettings(body);
-    onSaved(updated);
-    setKey("");
-    setOpenaiKey("");
-    setOpen(false);
-  };
-
-  return (
-    <div className="relative">
-      <button
-        className={`rounded px-3 py-1 text-xs font-medium ${
-          configured ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-        }`}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {configured ? `✓ ${settings?.agent_model}` : "⚠ Configure API key"}
-      </button>
-      {open && (
-        <div className="absolute right-0 z-10 mt-2 w-80 space-y-2 rounded border bg-white p-3 shadow">
-          <label className="block text-xs font-medium text-slate-600">Anthropic API key</label>
-          <input
-            type="password"
-            className="w-full rounded border px-2 py-1 text-sm"
-            placeholder={configured ? "••••• (set)" : "sk-ant-…"}
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-          <label className="block text-xs font-medium text-slate-600">
-            OpenAI API key (embeddings)
-          </label>
-          <input
-            type="password"
-            className="w-full rounded border px-2 py-1 text-sm"
-            placeholder={settings?.openai_key_configured ? "••••• (set)" : "sk-…"}
-            value={openaiKey}
-            onChange={(e) => setOpenaiKey(e.target.value)}
-          />
-          <label className="block text-xs font-medium text-slate-600">Agent model</label>
-          <input
-            className="w-full rounded border px-2 py-1 text-sm"
-            placeholder={settings?.agent_model ?? "claude-sonnet-4-6"}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-          />
-          <button
-            className="w-full rounded bg-accent py-1.5 text-sm font-medium text-white"
-            onClick={save}
-          >
-            Save
-          </button>
-          <p className="text-[11px] text-slate-400">
-            Stored locally. If left blank, the local Claude CLI&rsquo;s own auth is used.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}

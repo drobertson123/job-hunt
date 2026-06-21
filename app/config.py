@@ -74,6 +74,9 @@ class AppConfig(BaseSettings):
     # Optional shared secret for the inbound SMS webhook (None = no auth).
     sms_webhook_token: str | None = None
 
+    # Google OAuth loopback redirect URI (must match Google Cloud console).
+    google_redirect_uri: str = "http://127.0.0.1:8000/api/google/oauth/callback"
+
     # --- "What needs attention" thresholds ---
     attention_stale_active_days: int = 7  # active/in-dialogue with no activity
     attention_untriaged_days: int = 14  # new/qualifying left sitting
