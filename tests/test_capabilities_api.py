@@ -34,6 +34,7 @@ def test_list_capabilities(client):
     assert set(by_name) == {
         "enrich-opportunity", "company-research", "company-enrich", "cv-tailor",
         "cover-letter", "interview-prep", "fit-analysis", "email-analyser",
+        "sms-analyser",
         "discover-opportunities", "qualify-opportunity",
         "analyze-opportunity", "draft-pursuit",
     }
@@ -138,7 +139,7 @@ def test_list_includes_business_capabilities(client):
         "discover-opportunities", "qualify-opportunity",
         "analyze-opportunity", "draft-pursuit",
     } <= names
-    assert len(names) == 12
+    assert len(names) == 13
 
 
 def test_qualify_requires_opportunity_422(client):

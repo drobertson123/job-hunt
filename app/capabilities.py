@@ -112,6 +112,16 @@ CAPABILITIES = [
         plugin=CAREER_PLUGIN,
     ),
     Capability(
+        name="sms-analyser",
+        skill="sms-analyser",
+        label="Analyse text",
+        description="Paste a text message about an opportunity; log it and capture follow-ups.",
+        requires_opportunity=True,
+        requires_input=True,
+        include_profile=False,
+        plugin=CAREER_PLUGIN,
+    ),
+    Capability(
         name="discover-opportunities",
         skill="discover-opportunities",
         label="Discover",
