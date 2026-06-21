@@ -102,6 +102,16 @@ CAPABILITIES = [
         plugin=CAREER_PLUGIN,
     ),
     Capability(
+        name="email-analyser",
+        skill="email-analyser",
+        label="Analyse email",
+        description="Paste an email about an opportunity; log it as a communication and capture follow-ups.",
+        requires_opportunity=True,
+        requires_input=True,
+        include_profile=False,
+        plugin=CAREER_PLUGIN,
+    ),
+    Capability(
         name="discover-opportunities",
         skill="discover-opportunities",
         label="Discover",
