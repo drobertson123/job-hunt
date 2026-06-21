@@ -485,6 +485,32 @@ class Communication(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
 
 
+class InterviewKind(str, Enum):
+    phone = "phone"
+    video = "video"
+    onsite = "onsite"
+    technical = "technical"
+    behavioral = "behavioral"
+    final = "final"
+    other = "other"
+
+
+class InterviewEvent(SQLModel, table=True):
+    __tablename__ = "interview_events"
+
+    id: int | None = Field(default=None, primary_key=True)
+    opportunity_id: str | None = Field(
+        default=None, foreign_key="opportunities.id", index=True
+    )
+    title: str
+    kind: InterviewKind = InterviewKind.other
+    starts_at: datetime = Field(index=True)
+    ends_at: datetime | None = None
+    location: str = ""
+    notes: str = ""
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
 class BriefingFactKey(str, Enum):
     """Fixed 'expected questions' a briefing should aim to answer; `other`
     covers freeform extras. Presence enforcement is a service concern."""

@@ -632,6 +632,48 @@ export async function createContact(body: {
   return res.json();
 }
 
+// ----- interviews (spec: interview-calendar) -----
+
+export type Interview = {
+  id: number;
+  opportunity_id: string | null;
+  title: string;
+  kind: string;
+  starts_at: string;
+  ends_at: string | null;
+  location: string;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchInterviews(upcoming = true): Promise<Interview[]> {
+  const res = await fetch(`/api/interviews${upcoming ? "?upcoming=true" : ""}`);
+  if (!res.ok) throw new Error(`interviews failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createInterview(body: {
+  title: string;
+  starts_at: string;
+  opportunity_id?: string | null;
+  kind?: string;
+  location?: string;
+  notes?: string;
+}): Promise<Interview> {
+  const res = await fetch("/api/interviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create interview failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteInterview(id: number): Promise<void> {
+  const res = await fetch(`/api/interviews/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`delete interview failed: ${res.status}`);
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {

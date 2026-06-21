@@ -29,6 +29,7 @@ from app.routers import (
     contacts,
     corpus,
     health,
+    interviews,
     job_sources,
     notes,
     opportunities,
@@ -68,6 +69,7 @@ app.include_router(companies.router)
 app.include_router(artifacts.router)
 app.include_router(attention.router)
 app.include_router(corpus.router)
+app.include_router(interviews.router)
 
 # Serve the built frontend (static export) at / when it exists. Mounted last so
 # /api/* routes take precedence. html=True serves index.html for the SPA root.
