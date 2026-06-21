@@ -36,6 +36,7 @@ const SECTIONS: { title: string; items: Item[] }[] = [
     items: [
       { key: "workspace", label: "Workspace" },
       { key: "profile", label: "Profile" },
+      { key: "library", label: "Library" },
     ],
   },
 ];

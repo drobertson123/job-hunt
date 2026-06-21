@@ -35,6 +35,7 @@ import InterviewsTab from "./components/InterviewsTab";
 import SourcesTab from "./components/SourcesTab";
 import WeeklyTab from "./components/WeeklyTab";
 import LeftNav from "./components/LeftNav";
+import LibraryTab from "./components/LibraryTab";
 import SettingsBadge from "./components/SettingsBadge";
 
 type ChatItem =
@@ -54,7 +55,7 @@ export default function Home() {
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [canvasTab, setCanvasTab] = useState<
-    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources" | "weekly"
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources" | "weekly" | "library"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const [attentionCount, setAttentionCount] = useState(0);
@@ -323,6 +324,8 @@ export default function Home() {
                   setCanvasTab("detail");
                 }}
               />
+            ) : canvasTab === "library" ? (
+              <LibraryTab />
             ) : (
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                 {artifacts.length === 0 && notes.length === 0 && (
