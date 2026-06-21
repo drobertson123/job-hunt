@@ -412,6 +412,7 @@ export type OpportunityDetail = {
   applications: Application[];
   communications: Communication[];
   briefing: Briefing | null;
+  company: Company | null;
 };
 
 export async function fetchOpportunityDetail(oppId: string): Promise<OpportunityDetail> {
@@ -500,5 +501,38 @@ export async function fetchCommunications(oppId?: string): Promise<Communication
   const qs = oppId ? `?opportunity_id=${oppId}` : "";
   const res = await fetch(`/api/communications${qs}`);
   if (!res.ok) throw new Error(`communications failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- company normalization (spec: company-normalization) -----
+
+export type Company = {
+  id: string;
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  size: string;
+  hq_location: string | null;
+  careers_url: string | null;
+  linkedin_url: string | null;
+  ats_vendor: string | null;
+  summary: string | null;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchCompanies(): Promise<Company[]> {
+  const res = await fetch("/api/companies");
+  if (!res.ok) throw new Error(`companies failed: ${res.status}`);
+  return res.json();
+}
+
+export async function backfillCompanies(): Promise<{
+  opportunities_linked: number;
+  contacts_linked: number;
+  companies: number;
+}> {
+  const res = await fetch("/api/companies/backfill", { method: "POST" });
+  if (!res.ok) throw new Error(`backfill failed: ${res.status}`);
   return res.json();
 }
