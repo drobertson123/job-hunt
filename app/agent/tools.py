@@ -30,6 +30,7 @@ from app.models import (
     CommDirection,
     CompanySize,
     DecisionKind,
+    JobSourceKind,
     Note,
     OpportunityType,
     PipelineStage,
@@ -249,6 +250,10 @@ async def record_application(args: dict[str, Any]) -> dict[str, Any]:
             "summary": {"type": "string"},
             "notes": {"type": "string"},
             "company_id": {"type": "string", "description": "set to enrich an existing company"},
+            "link_opportunity_id": {
+                "type": "string",
+                "description": "set to link this opportunity to the company",
+            },
         },
         "required": ["name"],
     },
@@ -269,8 +274,52 @@ async def record_company(args: dict[str, Any]) -> dict[str, Any]:
             summary=args.get("summary"),
             notes=args.get("notes"),
             company_id=args.get("company_id"),
+            link_opportunity_id=args.get("link_opportunity_id"),
         )
         return _ok(f"Recorded company {c.id}: {c.name}.")
+
+
+@tool(
+    "record_job_source",
+    "Record or enrich where an opportunity came from (job board, referral, "
+    "recruiter, saved search), optionally linking it to an opportunity.",
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "kind": {
+                "type": "string",
+                "enum": ["job_board", "company_site", "referral", "recruiter",
+                         "social", "aggregator", "other"],
+            },
+            "url": {"type": "string"},
+            "saved_query": {"type": "string"},
+            "notes": {"type": "string"},
+            "referrer_contact_id": {"type": "integer"},
+            "job_source_id": {"type": "string", "description": "set to enrich an existing source"},
+            "link_opportunity_id": {
+                "type": "string",
+                "description": "set to attribute this opportunity to the source",
+            },
+        },
+        "required": ["name"],
+    },
+)
+async def record_job_source(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        kind = _enum(JobSourceKind, args["kind"], JobSourceKind.other) if args.get("kind") else None
+        js = services.upsert_job_source(
+            s,
+            name=args["name"],
+            kind=kind,
+            url=args.get("url"),
+            saved_query=args.get("saved_query"),
+            notes=args.get("notes"),
+            referrer_contact_id=args.get("referrer_contact_id"),
+            job_source_id=args.get("job_source_id"),
+            link_opportunity_id=args.get("link_opportunity_id"),
+        )
+        return _ok(f"Recorded job source {js.id}: {js.name}.")
 
 
 @tool(
@@ -383,6 +432,40 @@ async def save_artifact(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_contact",
+    "Record a person tied to an opportunity (recruiter, hiring manager, referrer).",
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "opportunity_id": {"type": "string"},
+            "role": {"type": "string"},
+            "organization": {"type": "string"},
+            "company_id": {"type": "string"},
+            "link": {"type": "string"},
+            "notes": {"type": "string"},
+            "contact_id": {"type": "integer", "description": "set to update an existing contact"},
+        },
+        "required": ["name"],
+    },
+)
+async def record_contact(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        c = services.add_contact(
+            s,
+            name=args["name"],
+            opportunity_id=args.get("opportunity_id"),
+            role=args.get("role"),
+            organization=args.get("organization"),
+            company_id=args.get("company_id"),
+            link=args.get("link"),
+            notes=args.get("notes") or "",
+            contact_id=args.get("contact_id"),
+        )
+        return _ok(f"Recorded contact {c.id}: {c.name}.")
+
+
+@tool(
     "record_decision",
     "Record a choice or feedback (e.g. why the user passed on an opportunity).",
     {
@@ -452,7 +535,9 @@ ALL_TOOLS = [
     record_action,
     record_application,
     record_company,
+    record_job_source,
     record_communication,
+    record_contact,
     synthesize_briefing,
     save_artifact,
     record_decision,

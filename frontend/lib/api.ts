@@ -411,8 +411,10 @@ export type OpportunityDetail = {
   decisions: Decision[];
   applications: Application[];
   communications: Communication[];
+  contacts: Contact[];
   briefing: Briefing | null;
   company: Company | null;
+  source: JobSource | null;
 };
 
 export async function fetchOpportunityDetail(oppId: string): Promise<OpportunityDetail> {
@@ -566,5 +568,63 @@ export async function createAction(body: {
 export async function completeAction(id: number): Promise<Action> {
   const res = await fetch(`/api/actions/${id}/complete`, { method: "POST" });
   if (!res.ok) throw new Error(`complete action failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- contacts (spec: contacts) -----
+
+export type Contact = {
+  id: number;
+  opportunity_id: string | null;
+  name: string;
+  role: string | null;
+  organization: string | null;
+  company_id: string | null;
+  link: string | null;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchContacts(oppId?: string): Promise<Contact[]> {
+  const qs = oppId ? `?opportunity_id=${oppId}` : "";
+  const res = await fetch(`/api/contacts${qs}`);
+  if (!res.ok) throw new Error(`contacts failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createContact(body: {
+  name: string;
+  opportunity_id?: string | null;
+  role?: string | null;
+  organization?: string | null;
+  link?: string | null;
+  notes?: string;
+}): Promise<Contact> {
+  const res = await fetch("/api/contacts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create contact failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- job sources (spec: jobsource-attribution) -----
+
+export type JobSource = {
+  id: string;
+  name: string;
+  kind: string;
+  url: string | null;
+  saved_query: string | null;
+  last_checked_at: string | null;
+  referrer_contact_id: number | null;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchJobSources(): Promise<JobSource[]> {
+  const res = await fetch("/api/job-sources");
+  if (!res.ok) throw new Error(`job sources failed: ${res.status}`);
   return res.json();
 }

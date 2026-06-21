@@ -22,3 +22,18 @@ async def test_record_company_tool_creates_and_enriches():
     with Session(engine) as s:
         row = s.get(Company, cid)
         assert row.industry == "Defense" and row.ats_vendor == "Lever"
+
+
+@pytest.mark.asyncio
+async def test_record_company_tool_links_opportunity():
+    from app.models import Opportunity, OpportunityType
+    with Session(engine) as s:
+        opp = Opportunity(type=OpportunityType.job, title="Role")
+        s.add(opp)
+        s.commit()
+        s.refresh(opp)
+        oid = opp.id
+    await tools.record_company.handler({"name": "Wayne Ent", "link_opportunity_id": oid})
+    with Session(engine) as s:
+        linked = s.get(Opportunity, oid)
+        assert linked.company_id is not None

@@ -52,6 +52,16 @@ CAPABILITIES = [
         plugin=CAREER_PLUGIN,
     ),
     Capability(
+        name="company-enrich",
+        skill="company-enrich",
+        label="Enrich company",
+        description="Research the company behind an opportunity into its structured profile.",
+        requires_opportunity=True,
+        requires_input=False,
+        include_profile=False,
+        plugin=CAREER_PLUGIN,
+    ),
+    Capability(
         name="cv-tailor",
         skill="cv-tailor",
         label="Tailor CV",

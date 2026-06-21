@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { OpportunityDetail, completeAction, fetchOpportunityDetail } from "@/lib/api";
+import { OpportunityDetail, completeAction, createContact, fetchOpportunityDetail } from "@/lib/api";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -44,6 +44,24 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
   useEffect(() => {
     load();
   }, [load]);
+
+  const [cName, setCName] = useState("");
+  const [cRole, setCRole] = useState("");
+  const [cLink, setCLink] = useState("");
+
+  const addContact = async () => {
+    if (!cName.trim()) return;
+    await createContact({
+      name: cName.trim(),
+      role: cRole || null,
+      link: cLink || null,
+      opportunity_id: opportunityId,
+    });
+    setCName("");
+    setCRole("");
+    setCLink("");
+    load();
+  };
 
   if (!opportunityId) {
     return (
@@ -100,6 +118,25 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
             )}
           </div>
         )}
+        {detail.source && (
+          <div className="text-xs text-slate-500">
+            Source: <span className="font-medium">{detail.source.name}</span>
+            {detail.source.kind && ` · ${detail.source.kind}`}
+            {detail.source.url && (
+              <>
+                {" · "}
+                <a
+                  href={detail.source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 underline"
+                >
+                  link
+                </a>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <Section title="Briefing" count={detail.briefing ? 1 : 0}>
@@ -139,6 +176,34 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
           </div>
         ))}
       </Section>
+
+      <Section title="Contacts" count={detail.contacts.length}>
+        {detail.contacts.map((c) => (
+          <div key={c.id} className="rounded border border-slate-200 p-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{c.name}</span>
+              {c.role && <span className="text-xs text-slate-500">{c.role}</span>}
+              {c.link && (
+                <a href={c.link} target="_blank" rel="noreferrer"
+                   className="text-xs text-blue-600 underline">link</a>
+              )}
+            </div>
+            {c.notes && <p className="text-xs text-slate-500">{c.notes}</p>}
+          </div>
+        ))}
+      </Section>
+      <div className="mt-1 flex flex-wrap items-center gap-1">
+        <input value={cName} onChange={(e) => setCName(e.target.value)}
+               placeholder="name" className="rounded border px-2 py-1 text-xs" />
+        <input value={cRole} onChange={(e) => setCRole(e.target.value)}
+               placeholder="role" className="rounded border px-2 py-1 text-xs" />
+        <input value={cLink} onChange={(e) => setCLink(e.target.value)}
+               placeholder="link" className="rounded border px-2 py-1 text-xs" />
+        <button onClick={addContact} disabled={!cName.trim()}
+                className="rounded bg-slate-900 px-2 py-1 text-xs text-white disabled:opacity-50">
+          Add
+        </button>
+      </div>
 
       <Section title="Communications" count={detail.communications.length}>
         {detail.communications.map((c) => (

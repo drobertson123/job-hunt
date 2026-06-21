@@ -65,3 +65,21 @@ def test_backfill_links_opps_and_contacts_idempotently():
 
         again = services.backfill_company_ids(s)
         assert again["opportunities_linked"] == 0 and again["contacts_linked"] == 0
+
+
+def test_upsert_company_links_opportunity():
+    with Session(engine) as s:
+        opp = Opportunity(type=OpportunityType.job, title="Role", organization="Acme")
+        s.add(opp)
+        s.commit()
+        s.refresh(opp)
+        c = services.upsert_company(s, name="Acme", industry="Energy",
+                                    link_opportunity_id=opp.id)
+        s.refresh(opp)
+        assert opp.company_id == c.id
+
+
+def test_upsert_company_link_missing_opportunity_is_noop():
+    with Session(engine) as s:
+        c = services.upsert_company(s, name="Globex", link_opportunity_id="nope")
+        assert c.id is not None  # did not raise
