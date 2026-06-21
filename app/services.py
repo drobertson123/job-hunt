@@ -31,6 +31,8 @@ from app.models import (
     Contact,
     Decision,
     DecisionKind,
+    JobSource,
+    JobSourceKind,
     Opportunity,
     OpportunityType,
     PipelineStage,
@@ -522,3 +524,56 @@ def list_contacts(
     if opportunity_id:
         q = q.where(Contact.opportunity_id == opportunity_id)
     return list(session.exec(q.order_by(Contact.created_at.desc())).all())
+
+
+# --- Job Sources --------------------------------------------------------- #
+
+
+def upsert_job_source(
+    session: Session,
+    *,
+    name: str,
+    kind: JobSourceKind | None = None,
+    url: str | None = None,
+    saved_query: str | None = None,
+    notes: str | None = None,
+    referrer_contact_id: int | None = None,
+    last_checked_at: datetime | None = None,
+    job_source_id: str | None = None,
+    link_opportunity_id: str | None = None,
+) -> JobSource:
+    row = session.get(JobSource, job_source_id) if job_source_id else None
+    if row is None:
+        row = session.exec(
+            select(JobSource).where(func.lower(JobSource.name) == name.strip().lower())
+        ).first()
+    if row is None:
+        row = JobSource(name=name.strip())
+    # Incremental: only non-None args overwrite.
+    if kind is not None:
+        row.kind = kind
+    if url is not None:
+        row.url = url
+    if saved_query is not None:
+        row.saved_query = saved_query
+    if notes is not None:
+        row.notes = notes
+    if referrer_contact_id is not None:
+        row.referrer_contact_id = referrer_contact_id
+    if last_checked_at is not None:
+        row.last_checked_at = last_checked_at
+    row.updated_at = _utcnow()
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    if link_opportunity_id:
+        opp = session.get(Opportunity, link_opportunity_id)
+        if opp is not None:
+            opp.source_id = row.id
+            session.add(opp)
+            session.commit()
+    return row
+
+
+def list_job_sources(session: Session) -> list[JobSource]:
+    return list(session.exec(select(JobSource).order_by(func.lower(JobSource.name))).all())
