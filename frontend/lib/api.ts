@@ -571,6 +571,18 @@ export async function completeAction(id: number): Promise<Action> {
   return res.json();
 }
 
+export async function snoozeAction(id: number): Promise<Action> {
+  const res = await fetch(`/api/actions/${id}/snooze`, { method: "POST" });
+  if (!res.ok) throw new Error(`snooze action failed: ${res.status}`);
+  return res.json();
+}
+
+export async function reopenAction(id: number): Promise<Action> {
+  const res = await fetch(`/api/actions/${id}/reopen`, { method: "POST" });
+  if (!res.ok) throw new Error(`reopen action failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- contacts (spec: contacts) -----
 
 export type Contact = {
