@@ -653,6 +653,7 @@ export type Contact = {
   organization: string | null;
   company_id: string | null;
   link: string | null;
+  email?: string | null;
   notes: string;
   created_at: string;
 };
@@ -670,6 +671,7 @@ export async function createContact(body: {
   role?: string | null;
   organization?: string | null;
   link?: string | null;
+  email?: string | null;
   notes?: string;
 }): Promise<Contact> {
   const res = await fetch("/api/contacts", {
