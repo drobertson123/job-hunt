@@ -1,4 +1,4 @@
-"""Communications endpoints — read path + inbound SMS webhook."""
+"""Communications endpoints — read path + inbound message webhooks."""
 
 from __future__ import annotations
 
@@ -24,6 +24,41 @@ def list_communications(
     return services.list_communications(session, opportunity_id=opportunity_id)
 
 
+def _check_token(x_sms_token: str | None, token: str | None) -> None:
+    expected = get_config().sms_webhook_token
+    if expected and (x_sms_token or token) != expected:
+        raise HTTPException(status_code=401, detail="invalid token")
+
+
+def _naive_utc(dt: datetime | None) -> datetime | None:
+    # Normalize a tz-aware timestamp to naive UTC (the schema's convention).
+    if dt is not None and dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def _record_inbound(
+    session: Session,
+    *,
+    channel: CommChannel,
+    sender: str,
+    body: str,
+    received_at: datetime | None,
+    opportunity_id: str | None,
+    label: str,
+) -> Communication:
+    return services.record_communication(
+        session,
+        direction=CommDirection.inbound,
+        channel=channel,
+        opportunity_id=opportunity_id,
+        subject=f"{label} from {sender}",
+        body=body,
+        occurred_at=_naive_utc(received_at),
+        thread_key=sender,
+    )
+
+
 class SmsInbound(BaseModel):
     model_config = {"populate_by_name": True}
 
@@ -33,6 +68,10 @@ class SmsInbound(BaseModel):
     opportunity_id: str | None = None
 
 
+class InboundMessage(SmsInbound):
+    channel: CommChannel = CommChannel.other
+
+
 @router.post("/sms")
 def inbound_sms(
     payload: SmsInbound,
@@ -40,21 +79,32 @@ def inbound_sms(
     x_sms_token: str | None = Header(default=None),
     session: Session = Depends(get_session),
 ) -> Communication:
-    expected = get_config().sms_webhook_token
-    if expected and (x_sms_token or token) != expected:
-        raise HTTPException(status_code=401, detail="invalid sms token")
-    # Normalize tz-aware timestamps to naive UTC (the schema's convention);
-    # a forwarder sending a local-offset time is converted, not just truncated.
-    occurred_at = payload.received_at
-    if occurred_at is not None and occurred_at.tzinfo is not None:
-        occurred_at = occurred_at.astimezone(timezone.utc).replace(tzinfo=None)
-    return services.record_communication(
+    _check_token(x_sms_token, token)
+    return _record_inbound(
         session,
-        direction=CommDirection.inbound,
         channel=CommChannel.sms,
-        opportunity_id=payload.opportunity_id,
-        subject=f"SMS from {payload.sender}",
+        sender=payload.sender,
         body=payload.body,
-        occurred_at=occurred_at,
-        thread_key=payload.sender,
+        received_at=payload.received_at,
+        opportunity_id=payload.opportunity_id,
+        label="SMS",
+    )
+
+
+@router.post("/inbound")
+def inbound_message(
+    payload: InboundMessage,
+    token: str | None = None,
+    x_sms_token: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+) -> Communication:
+    _check_token(x_sms_token, token)
+    return _record_inbound(
+        session,
+        channel=payload.channel,
+        sender=payload.sender,
+        body=payload.body,
+        received_at=payload.received_at,
+        opportunity_id=payload.opportunity_id,
+        label=payload.channel.value,
     )
