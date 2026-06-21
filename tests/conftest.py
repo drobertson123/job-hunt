@@ -57,6 +57,7 @@ def _clear_db():
         Decision,
         Document,
         GroundingReport,
+        InterviewEvent,
         JobSource,
         Opportunity,
         Profile,
@@ -64,7 +65,7 @@ def _clear_db():
 
     with Session(engine) as s:
         for model in (
-            Briefing, Communication, Application,
+            Briefing, Communication, Application, InterviewEvent,
             GroundingReport, Artifact, Action, Decision, Contact,
             Opportunity, JobSource, Company, Chunk, Document, Profile,
         ):
