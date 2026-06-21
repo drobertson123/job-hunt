@@ -39,6 +39,7 @@ def init_db() -> None:
     _ensure_column(engine, "opportunities", "company_id", "VARCHAR")
     _ensure_column(engine, "opportunities", "source_id", "VARCHAR")
     _ensure_column(engine, "contacts", "company_id", "VARCHAR")
+    _ensure_column(engine, "profile", "pinned_skills", "JSON DEFAULT '[]'")
 
 
 def get_session() -> Iterator[Session]:

@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from app import corpus_service
 from app.db import get_session
 from app.models import Document, DocumentMediaType, DocumentSource, Profile
-from app.profile_service import synthesize_profile
+from app.profile_service import set_pinned_skills, synthesize_profile
 
 router = APIRouter(prefix="/api/corpus", tags=["corpus"])
 
@@ -121,3 +121,14 @@ async def synthesize(session: Session = Depends(get_session)) -> Profile:
 @router.get("/profile", response_model=Profile | None)
 def get_profile(session: Session = Depends(get_session)) -> Profile | None:
     return session.exec(select(Profile)).first()
+
+
+class PinnedSkillsUpdate(BaseModel):
+    pinned_skills: list[str]
+
+
+@router.patch("/profile", response_model=Profile)
+def update_profile(
+    body: PinnedSkillsUpdate, session: Session = Depends(get_session)
+) -> Profile:
+    return set_pinned_skills(session, body.pinned_skills)
