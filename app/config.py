@@ -64,6 +64,8 @@ class AppConfig(BaseSettings):
     # --- Agent safety caps (bound runaway loops / cost) ---
     agent_max_turns: int = 24
     agent_timeout_seconds: int = 300
+    # Persistent Claude CLI session: keep-alive probe interval (0 disables).
+    agent_keep_alive_seconds: int = 120
 
     # --- "What needs attention" thresholds ---
     attention_stale_active_days: int = 7  # active/in-dialogue with no activity
