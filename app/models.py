@@ -483,6 +483,7 @@ class Communication(SQLModel, table=True):
     body: str = ""
     occurred_at: datetime = Field(default_factory=_utcnow, index=True)
     thread_key: str | None = Field(default=None, index=True)
+    external_id: str | None = Field(default=None, index=True)  # provider message id (dedup)
     follow_up_due_at: datetime | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_utcnow)
 
