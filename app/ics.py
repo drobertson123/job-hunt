@@ -13,8 +13,12 @@ from app.models import InterviewEvent
 
 
 def _esc(text: str) -> str:
+    # Normalize CR/CRLF to a single escaped newline first — agent-pasted email
+    # text often carries \r\n, and a bare CR mid-value is malformed per RFC 5545.
     return (
         text.replace("\\", "\\\\")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
         .replace(";", "\\;")
         .replace(",", "\\,")
         .replace("\n", "\\n")

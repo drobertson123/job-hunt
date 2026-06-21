@@ -53,7 +53,7 @@ stays human-only via the API (agents add, humans curate).
 - `POST /api/interviews` (InterviewCreate) → create
 - `DELETE /api/interviews/{id}` → 204 / 404
 - `GET /api/interviews/{id}.ics` → single VEVENT (`text/calendar`, attachment)
-- `GET /api/interviews.ics` → all upcoming (one VCALENDAR; subscribe/import)
+- `GET /api/interviews/calendar.ics` → all upcoming (one VCALENDAR; subscribe/import)
 Registered in `app/main.py`.
 
 ## UI — `frontend/app/components/InterviewsTab.tsx`
@@ -61,7 +61,7 @@ A new canvas tab (modeled on `ActionsTab`): an add row (opportunity select,
 title, kind, `datetime-local` start, location) + a list of upcoming interviews
 sorted by start, each with its opportunity link, formatted date/time, a
 "Add to calendar" `.ics` download link, and a Remove button. A header
-"Download all (.ics)" link to `/api/interviews.ics`. Wired into `page.tsx`
+"Download all (.ics)" link to `/api/interviews/calendar.ics`. Wired into `page.tsx`
 (canvas union, nav button + count badge, render branch). `api.ts` gains the
 `Interview` type and `fetchInterviews`/`createInterview`/`deleteInterview`.
 

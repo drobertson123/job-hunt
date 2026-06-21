@@ -31,3 +31,11 @@ def test_to_ics_escapes_and_multiple_events():
     )
     assert out.count("BEGIN:VEVENT") == 2
     assert "SUMMARY:Onsite\\, round 2\\; final" in out
+
+
+def test_to_ics_normalizes_crlf_in_notes():
+    now = datetime(2026, 6, 21, 12, 0)
+    out = to_ics([_ev(notes="line1\r\nline2\rline3")], now=now)
+    assert "DESCRIPTION:line1\\nline2\\nline3" in out
+    # no bare CR survives inside a content value
+    assert "\rline" not in out
