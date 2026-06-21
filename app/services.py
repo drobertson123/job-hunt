@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.models import (
@@ -25,6 +26,9 @@ from app.models import (
     CommChannel,
     CommDirection,
     Communication,
+    Company,
+    CompanySize,
+    Contact,
     Decision,
     DecisionKind,
     Opportunity,
@@ -386,3 +390,82 @@ def list_communications(
     if opportunity_id:
         q = q.where(Communication.opportunity_id == opportunity_id)
     return list(session.exec(q.order_by(Communication.occurred_at.desc())).all())
+
+
+# --- Companies ------------------------------------------------------------ #
+
+
+def upsert_company(
+    session: Session,
+    *,
+    name: str,
+    domain: str | None = None,
+    industry: str | None = None,
+    size: CompanySize | None = None,
+    hq_location: str | None = None,
+    careers_url: str | None = None,
+    linkedin_url: str | None = None,
+    ats_vendor: str | None = None,
+    summary: str | None = None,
+    notes: str | None = None,
+    company_id: str | None = None,
+) -> Company:
+    row = session.get(Company, company_id) if company_id else None
+    if row is None:
+        row = session.exec(
+            select(Company).where(func.lower(Company.name) == name.strip().lower())
+        ).first()
+    if row is None:
+        row = Company(name=name.strip())
+    # Incremental: only non-None args overwrite (mirrors upsert_opportunity).
+    if domain is not None:
+        row.domain = domain
+    if industry is not None:
+        row.industry = industry
+    if size is not None:
+        row.size = size
+    if hq_location is not None:
+        row.hq_location = hq_location
+    if careers_url is not None:
+        row.careers_url = careers_url
+    if linkedin_url is not None:
+        row.linkedin_url = linkedin_url
+    if ats_vendor is not None:
+        row.ats_vendor = ats_vendor
+    if summary is not None:
+        row.summary = summary
+    if notes is not None:
+        row.notes = notes
+    row.updated_at = _utcnow()
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def list_companies(session: Session) -> list[Company]:
+    return list(session.exec(select(Company).order_by(func.lower(Company.name))).all())
+
+
+def backfill_company_ids(session: Session) -> dict[str, int]:
+    opportunities_linked = 0
+    for opp in session.exec(select(Opportunity)).all():
+        if opp.organization and opp.organization.strip() and opp.company_id is None:
+            c = upsert_company(session, name=opp.organization)
+            opp.company_id = c.id
+            session.add(opp)
+            opportunities_linked += 1
+    contacts_linked = 0
+    for ct in session.exec(select(Contact)).all():
+        if ct.organization and ct.organization.strip() and ct.company_id is None:
+            c = upsert_company(session, name=ct.organization)
+            ct.company_id = c.id
+            session.add(ct)
+            contacts_linked += 1
+    session.commit()
+    total = len(session.exec(select(Company)).all())
+    return {
+        "opportunities_linked": opportunities_linked,
+        "contacts_linked": contacts_linked,
+        "companies": total,
+    }
