@@ -47,7 +47,11 @@ export default function CompaniesTab({ onOpen }: { onOpen: (oppId: string) => vo
         <p className="text-slate-400">No companies yet. Run backfill or let the agent add them.</p>
       ) : (
         companies.map((c) => {
-          const linked = opps.filter((o) => o.organization === c.name);
+          // Match the backend's case-insensitive, trimmed name dedup so opps
+          // aren't silently dropped when org casing/whitespace differs.
+          const linked = opps.filter(
+            (o) => o.organization?.trim().toLowerCase() === c.name.trim().toLowerCase(),
+          );
           return (
             <div key={c.id} className="rounded border border-slate-200 p-2">
               <div className="flex flex-wrap items-center gap-2">
