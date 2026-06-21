@@ -35,6 +35,7 @@ import ActionsTab from "./components/ActionsTab";
 import InterviewsTab from "./components/InterviewsTab";
 import SourcesTab from "./components/SourcesTab";
 import WeeklyTab from "./components/WeeklyTab";
+import CanvasNav from "./components/CanvasNav";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -250,128 +251,18 @@ export default function Home() {
 
         {/* Canvas pane */}
         <section className="flex min-h-0 flex-1 flex-col bg-white">
-          <div className="flex gap-4 border-b px-4 text-sm font-medium">
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "workspace"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("workspace")}
-            >
-              Workspace — Artifacts ({artifacts.length}) · Notes ({notes.length})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "profile"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("profile")}
-            >
-              Profile
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "applications"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("applications")}
-            >
-              Applications ({applications.length})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "briefing"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("briefing")}
-            >
-              Briefing
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "detail"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("detail")}
-            >
-              Detail
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "board"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("board")}
-            >
-              Board ({opps.length})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "attention"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("attention")}
-            >
-              Attention ({attentionCount})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "companies"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("companies")}
-            >
-              Companies ({companyCount})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "actions"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("actions")}
-            >
-              Actions ({openActionCount})
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "interviews"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("interviews")}
-            >
-              Interviews
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "sources"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("sources")}
-            >
-              Sources
-            </button>
-            <button
-              className={`border-b-2 py-2 ${
-                canvasTab === "weekly"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-              onClick={() => setCanvasTab("weekly")}
-            >
-              This week
-            </button>
-          </div>
+          <CanvasNav
+            active={canvasTab}
+            onSelect={(t) => setCanvasTab(t as typeof canvasTab)}
+            counts={{
+              board: opps.length,
+              attention: attentionCount,
+              applications: applications.length,
+              actions: openActionCount,
+              companies: companyCount,
+              workspace: artifacts.length + notes.length,
+            }}
+          />
           {canvasTab === "profile" ? (
             <ProfileTab />
           ) : canvasTab === "applications" ? (
