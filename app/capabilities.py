@@ -72,6 +72,16 @@ CAPABILITIES = [
         plugin=CAREER_PLUGIN,
     ),
     Capability(
+        name="cover-letter",
+        skill="cover-letter",
+        label="Cover letter",
+        description="Corpus-grounded cover letter for an opportunity.",
+        requires_opportunity=True,
+        requires_input=False,
+        include_profile=True,
+        plugin=CAREER_PLUGIN,
+    ),
+    Capability(
         name="interview-prep",
         skill="interview-prep",
         label="Interview prep",
