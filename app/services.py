@@ -517,6 +517,7 @@ def add_contact(
     opportunity_id: str | None = None,
     role: str | None = None,
     organization: str | None = None,
+    email: str | None = None,
     company_id: str | None = None,
     link: str | None = None,
     notes: str = "",
@@ -530,6 +531,7 @@ def add_contact(
     row.opportunity_id = opportunity_id
     row.role = role
     row.organization = organization
+    row.email = email
     row.company_id = company_id
     row.link = link
     row.notes = notes

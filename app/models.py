@@ -272,6 +272,8 @@ class Contact(SQLModel, table=True):
     organization: str | None = None
     company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
     link: str | None = None
+    email: str | None = None
+    google_resource_name: str | None = Field(default=None, index=True)
     notes: str = ""
     created_at: datetime = Field(default_factory=_utcnow)
 
