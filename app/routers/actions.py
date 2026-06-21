@@ -50,3 +50,19 @@ def complete_action(action_id: int, session: Session = Depends(get_session)) -> 
     if action is None:
         raise HTTPException(status_code=404, detail="action not found")
     return action
+
+
+@router.post("/{action_id}/snooze")
+def snooze_action(action_id: int, session: Session = Depends(get_session)) -> Action:
+    action = services.snooze_action(session, action_id)
+    if action is None:
+        raise HTTPException(status_code=404, detail="action not found")
+    return action
+
+
+@router.post("/{action_id}/reopen")
+def reopen_action(action_id: int, session: Session = Depends(get_session)) -> Action:
+    action = services.reopen_action(session, action_id)
+    if action is None:
+        raise HTTPException(status_code=404, detail="action not found")
+    return action

@@ -8,6 +8,8 @@ import {
   createAction,
   fetchActions,
   fetchOpportunities,
+  reopenAction,
+  snoozeAction,
 } from "@/lib/api";
 
 type Filter = "open" | "done" | "all";
@@ -144,14 +146,30 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
                 </span>
               )}
               {a.status === "open" ? (
-                <button
-                  onClick={() => completeAction(a.id).then(load)}
-                  className="rounded bg-slate-200 px-2 py-0.5 text-xs hover:bg-slate-300"
-                >
-                  Done
-                </button>
+                <>
+                  <button
+                    onClick={() => completeAction(a.id).then(load)}
+                    className="rounded bg-slate-200 px-2 py-0.5 text-xs hover:bg-slate-300"
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={() => snoozeAction(a.id).then(load)}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+                  >
+                    Snooze
+                  </button>
+                </>
               ) : (
-                <span className="text-xs text-slate-400">{a.status}</span>
+                <>
+                  <span className="text-xs text-slate-400">{a.status}</span>
+                  <button
+                    onClick={() => reopenAction(a.id).then(load)}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+                  >
+                    Reopen
+                  </button>
+                </>
               )}
             </div>
           );
