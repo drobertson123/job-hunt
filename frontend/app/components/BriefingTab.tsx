@@ -2,17 +2,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Briefing, fetchBriefing, synthesizeBriefing } from "@/lib/api";
+import FetchError from "./FetchError";
 
 export default function BriefingTab({ opportunityId }: { opportunityId: string }) {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(() => {
     if (!opportunityId) {
       setBriefing(null);
       return;
     }
-    fetchBriefing(opportunityId).then(setBriefing).catch(() => setBriefing(null));
+    fetchBriefing(opportunityId)
+      .then((b) => {
+        setBriefing(b);
+        setError(false);
+      })
+      .catch(() => {
+        setBriefing(null);
+        setError(true);
+      });
   }, [opportunityId]);
 
   useEffect(() => {
@@ -26,6 +36,8 @@ export default function BriefingTab({ opportunityId }: { opportunityId: string }
       </p>
     );
   }
+
+  if (error) return <FetchError onRetry={load} />;
 
   const synth = async () => {
     setBusy(true);
