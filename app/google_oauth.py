@@ -18,6 +18,8 @@ TOKEN_URI = "https://oauth2.googleapis.com/token"
 USERINFO_URI = "https://www.googleapis.com/oauth2/v2/userinfo"
 DEFAULT_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/contacts",
     "https://www.googleapis.com/auth/userinfo.email",
 ]
 

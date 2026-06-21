@@ -511,6 +511,7 @@ class InterviewEvent(SQLModel, table=True):
     ends_at: datetime | None = None
     location: str = ""
     notes: str = ""
+    gcal_event_id: str | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_utcnow)
 
 
