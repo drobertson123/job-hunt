@@ -388,6 +388,40 @@ async def save_artifact(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_contact",
+    "Record a person tied to an opportunity (recruiter, hiring manager, referrer).",
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "opportunity_id": {"type": "string"},
+            "role": {"type": "string"},
+            "organization": {"type": "string"},
+            "company_id": {"type": "string"},
+            "link": {"type": "string"},
+            "notes": {"type": "string"},
+            "contact_id": {"type": "integer", "description": "set to update an existing contact"},
+        },
+        "required": ["name"],
+    },
+)
+async def record_contact(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        c = services.add_contact(
+            s,
+            name=args["name"],
+            opportunity_id=args.get("opportunity_id"),
+            role=args.get("role"),
+            organization=args.get("organization"),
+            company_id=args.get("company_id"),
+            link=args.get("link"),
+            notes=args.get("notes") or "",
+            contact_id=args.get("contact_id"),
+        )
+        return _ok(f"Recorded contact {c.id}: {c.name}.")
+
+
+@tool(
     "record_decision",
     "Record a choice or feedback (e.g. why the user passed on an opportunity).",
     {
@@ -458,6 +492,7 @@ ALL_TOOLS = [
     record_application,
     record_company,
     record_communication,
+    record_contact,
     synthesize_briefing,
     save_artifact,
     record_decision,
