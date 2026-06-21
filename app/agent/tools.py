@@ -30,6 +30,7 @@ from app.models import (
     CommDirection,
     CompanySize,
     DecisionKind,
+    JobSourceKind,
     Note,
     OpportunityType,
     PipelineStage,
@@ -279,6 +280,49 @@ async def record_company(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_job_source",
+    "Record or enrich where an opportunity came from (job board, referral, "
+    "recruiter, saved search), optionally linking it to an opportunity.",
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "kind": {
+                "type": "string",
+                "enum": ["job_board", "company_site", "referral", "recruiter",
+                         "social", "aggregator", "other"],
+            },
+            "url": {"type": "string"},
+            "saved_query": {"type": "string"},
+            "notes": {"type": "string"},
+            "referrer_contact_id": {"type": "integer"},
+            "job_source_id": {"type": "string", "description": "set to enrich an existing source"},
+            "link_opportunity_id": {
+                "type": "string",
+                "description": "set to attribute this opportunity to the source",
+            },
+        },
+        "required": ["name"],
+    },
+)
+async def record_job_source(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        kind = _enum(JobSourceKind, args["kind"], JobSourceKind.other) if args.get("kind") else None
+        js = services.upsert_job_source(
+            s,
+            name=args["name"],
+            kind=kind,
+            url=args.get("url"),
+            saved_query=args.get("saved_query"),
+            notes=args.get("notes"),
+            referrer_contact_id=args.get("referrer_contact_id"),
+            job_source_id=args.get("job_source_id"),
+            link_opportunity_id=args.get("link_opportunity_id"),
+        )
+        return _ok(f"Recorded job source {js.id}: {js.name}.")
+
+
+@tool(
     "record_communication",
     "Log a communication (email/SMS/LinkedIn/phone/in-person) for an opportunity, "
     "with an optional follow-up due date that surfaces in the attention queue.",
@@ -491,6 +535,7 @@ ALL_TOOLS = [
     record_action,
     record_application,
     record_company,
+    record_job_source,
     record_communication,
     record_contact,
     synthesize_briefing,
