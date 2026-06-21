@@ -17,6 +17,7 @@ from app.models import (
     STAGE_ORDER,
     Action,
     ActionStatus,
+    Communication,
     Opportunity,
     PipelineStage,
 )
@@ -122,12 +123,32 @@ def needs_attention(session: Session) -> dict[str, Any]:
             }
         )
 
+    overdue_followups = session.exec(
+        select(Communication).where(
+            Communication.follow_up_due_at.is_not(None),
+            Communication.follow_up_due_at < now,
+        )
+    ).all()
+    for c in overdue_followups:
+        items.append(
+            {
+                "kind": "overdue_followup",
+                "severity": "high",
+                "opportunity_id": c.opportunity_id,
+                "communication_id": c.id,
+                "title": c.subject or f"{c.channel.value} {c.direction.value}",
+                "due_at": c.follow_up_due_at.isoformat(),
+                "reason": "Follow-up overdue",
+            }
+        )
+
     return {
         "items": items,
         "counts": {
             "overdue_actions": len(overdue),
             "stale_opportunities": len(stale),
             "untriaged_opportunities": len(untriaged),
+            "overdue_followups": len(overdue_followups),
             "total": len(items),
         },
     }

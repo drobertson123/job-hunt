@@ -26,6 +26,8 @@ from app.models import (
     ApplicationStatus,
     ArtifactFormat,
     ArtifactKind,
+    CommChannel,
+    CommDirection,
     DecisionKind,
     Note,
     OpportunityType,
@@ -226,6 +228,55 @@ async def record_application(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_communication",
+    "Log a communication (email/SMS/LinkedIn/phone/in-person) for an opportunity, "
+    "with an optional follow-up due date that surfaces in the attention queue.",
+    {
+        "type": "object",
+        "properties": {
+            "direction": {"type": "string", "enum": ["inbound", "outbound"]},
+            "channel": {
+                "type": "string",
+                "enum": ["email", "sms", "linkedin", "phone", "in_person", "other"],
+            },
+            "opportunity_id": {"type": "string"},
+            "contact_id": {"type": "integer"},
+            "company_id": {"type": "string"},
+            "subject": {"type": "string"},
+            "body": {"type": "string"},
+            "occurred_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "thread_key": {"type": "string"},
+            "follow_up_due_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "communication_id": {
+                "type": "integer",
+                "description": "set to update an existing communication",
+            },
+        },
+        "required": ["direction", "channel"],
+    },
+)
+async def record_communication(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        c = services.record_communication(
+            s,
+            direction=_enum(CommDirection, args.get("direction"), CommDirection.outbound),
+            channel=_enum(CommChannel, args.get("channel"), CommChannel.other),
+            opportunity_id=args.get("opportunity_id"),
+            contact_id=args.get("contact_id"),
+            company_id=args.get("company_id"),
+            subject=args.get("subject") or "",
+            body=args.get("body") or "",
+            occurred_at=_parse_dt(args.get("occurred_at")),
+            thread_key=args.get("thread_key"),
+            follow_up_due_at=_parse_dt(args.get("follow_up_due_at")),
+            communication_id=args.get("communication_id"),
+        )
+        return _ok(
+            f"Logged {c.direction.value} {c.channel.value} communication {c.id}."
+        )
+
+
+@tool(
     "synthesize_briefing",
     "Synthesize a structured briefing (salary, remote, tech stack, why-fit, "
     "concerns, ...) for an opportunity, grounded in its data and the user's corpus.",
@@ -354,6 +405,7 @@ ALL_TOOLS = [
     update_pipeline_status,
     record_action,
     record_application,
+    record_communication,
     synthesize_briefing,
     save_artifact,
     record_decision,

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Attention, AttentionItem, fetchAttention } from "@/lib/api";
 
 const GROUPS: { kind: string; label: string }[] = [
+  { kind: "overdue_followup", label: "Overdue follow-ups" },
   { kind: "overdue_action", label: "Overdue actions" },
   { kind: "stale_opportunity", label: "Stale opportunities" },
   { kind: "untriaged_opportunity", label: "Untriaged opportunities" },
@@ -16,6 +17,9 @@ function sevColor(severity: string): string {
 }
 
 function itemDetail(item: AttentionItem): string | null {
+  if (item.kind === "overdue_followup" && item.due_at) {
+    return `due ${new Date(item.due_at).toLocaleDateString()}`;
+  }
   if (item.kind === "overdue_action" && item.due_at) {
     return `due ${new Date(item.due_at).toLocaleDateString()}`;
   }
@@ -68,6 +72,9 @@ export default function AttentionTab({ onOpen }: { onOpen: (oppId: string) => vo
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
       <div className="flex flex-wrap gap-2 text-xs">
+        <span className="rounded bg-red-100 px-2 py-0.5 text-red-700">
+          Follow-ups {data.counts.overdue_followups}
+        </span>
         <span className="rounded bg-red-100 px-2 py-0.5 text-red-700">
           Overdue {data.counts.overdue_actions}
         </span>
