@@ -119,6 +119,33 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
         ))}
       </Section>
 
+      <Section title="Communications" count={detail.communications.length}>
+        {detail.communications.map((c) => (
+          <div key={c.id} className="rounded border border-slate-200 p-2">
+            <div className="flex items-center gap-2">
+              <Badge>{c.direction}</Badge>
+              <Badge>{c.channel}</Badge>
+              <span className="font-medium">{c.subject || "(no subject)"}</span>
+            </div>
+            <div className="text-xs text-slate-500">
+              {new Date(c.occurred_at).toLocaleDateString()}
+              {c.follow_up_due_at && (
+                <span
+                  className={
+                    new Date(c.follow_up_due_at) < new Date()
+                      ? "text-red-600"
+                      : "text-slate-500"
+                  }
+                >
+                  {" · follow-up "}
+                  {new Date(c.follow_up_due_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </Section>
+
       <Section title="Actions" count={detail.actions.length}>
         {detail.actions.map((a) => (
           <div key={a.id} className="flex items-center gap-2 rounded border border-slate-200 p-2">
