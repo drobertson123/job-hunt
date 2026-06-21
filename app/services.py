@@ -563,6 +563,7 @@ def upsert_job_source(
     kind: JobSourceKind | None = None,
     url: str | None = None,
     saved_query: str | None = None,
+    auto_search: bool | None = None,
     notes: str | None = None,
     referrer_contact_id: int | None = None,
     last_checked_at: datetime | None = None,
@@ -583,6 +584,8 @@ def upsert_job_source(
         row.url = url
     if saved_query is not None:
         row.saved_query = saved_query
+    if auto_search is not None:
+        row.auto_search = auto_search
     if notes is not None:
         row.notes = notes
     if referrer_contact_id is not None:
