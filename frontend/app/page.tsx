@@ -39,6 +39,7 @@ import LibraryTab from "./components/LibraryTab";
 import ContactsTab from "./components/ContactsTab";
 import MetricsTab from "./components/MetricsTab";
 import DocumentsTab from "./components/DocumentsTab";
+import AutomationsTab from "./components/AutomationsTab";
 import SettingsBadge from "./components/SettingsBadge";
 
 type ChatItem =
@@ -58,7 +59,7 @@ export default function Home() {
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [canvasTab, setCanvasTab] = useState<
-    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources" | "weekly" | "library" | "contacts" | "metrics" | "documents"
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources" | "weekly" | "library" | "contacts" | "metrics" | "documents" | "automations"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const [attentionCount, setAttentionCount] = useState(0);
@@ -299,6 +300,8 @@ export default function Home() {
               <MetricsTab />
             ) : canvasTab === "documents" ? (
               <DocumentsTab />
+            ) : canvasTab === "automations" ? (
+              <AutomationsTab onNavigate={(t) => setCanvasTab(t as typeof canvasTab)} />
             ) : (
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                 {artifacts.length === 0 && notes.length === 0 && (
