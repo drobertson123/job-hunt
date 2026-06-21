@@ -34,7 +34,7 @@ import ActionsTab from "./components/ActionsTab";
 import InterviewsTab from "./components/InterviewsTab";
 import SourcesTab from "./components/SourcesTab";
 import WeeklyTab from "./components/WeeklyTab";
-import LeftNav from "./components/LeftNav";
+import IconRail from "./components/IconRail";
 import LibraryTab from "./components/LibraryTab";
 import SettingsBadge from "./components/SettingsBadge";
 
@@ -184,31 +184,28 @@ export default function Home() {
 
   return (
     <main className="flex h-screen flex-col bg-bg text-ink">
-      <header className="flex h-11 flex-shrink-0 items-center justify-between border-b border-line bg-surface px-3">
-        <div className="flex items-center gap-2">
-          <span className="relative h-5 w-5 rounded-sm bg-accent">
-            <span className="absolute inset-1 rounded-[1px] border-[1.6px] border-white" />
-          </span>
-          <span className="text-[13.5px] font-semibold tracking-tight text-ink">
-            Opportunity Hunter
-          </span>
+      <header className="flex h-[68px] flex-none items-center justify-between gap-5 border-b border-line bg-bg px-7">
+        <div className="min-w-0">
+          <div className="text-[21px] font-bold tracking-tight text-ink">Good morning</div>
+          <div className="mt-0.5 text-[13px] text-ink-muted">
+            Your hunt ·{" "}
+            <span className="font-semibold text-error">{attentionCount} decisions</span> need you today
+          </div>
         </div>
-        <SettingsBadge settings={settings} onSaved={setSettings} />
+        <div className="flex flex-none items-center gap-3">
+          <SettingsBadge settings={settings} onSaved={setSettings} />
+          <button
+            onClick={() => setCanvasTab("board")}
+            className="flex items-center gap-1.5 rounded-md bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white shadow-accent transition hover:bg-accent-ink"
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M7.5 3v9M3 7.5h9"/></svg>
+            Add job
+          </button>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <LeftNav
-          active={canvasTab}
-          onSelect={(t) => setCanvasTab(t as typeof canvasTab)}
-          counts={{
-            board: opps.length,
-            attention: attentionCount,
-            applications: applications.length,
-            actions: openActionCount,
-            companies: companyCount,
-            workspace: artifacts.length + notes.length,
-          }}
-        />
+        <IconRail active={canvasTab} onSelect={(t) => setCanvasTab(t as typeof canvasTab)} />
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
           {/* Chat pane */}
           <section className="flex min-h-0 flex-1 flex-col border-r border-line">
@@ -347,18 +344,6 @@ export default function Home() {
           </section>
         </div>
       </div>
-
-      <footer className="flex h-6 flex-shrink-0 items-center gap-3 border-t border-line bg-surface-alt px-3 font-mono text-[11px] text-ink-muted">
-        <span>{opps.length} opportunities</span>
-        <span>·</span>
-        <span>{applications.length} applications</span>
-        <span>·</span>
-        <span>{openActionCount} open actions</span>
-        <span>·</span>
-        <span>{attentionCount} need attention</span>
-        <span className="flex-1" />
-        <span>opportunity-hunter</span>
-      </footer>
     </main>
   );
 }
