@@ -118,6 +118,25 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
             )}
           </div>
         )}
+        {detail.source && (
+          <div className="text-xs text-slate-500">
+            Source: <span className="font-medium">{detail.source.name}</span>
+            {detail.source.kind && ` · ${detail.source.kind}`}
+            {detail.source.url && (
+              <>
+                {" · "}
+                <a
+                  href={detail.source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 underline"
+                >
+                  link
+                </a>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <Section title="Briefing" count={detail.briefing ? 1 : 0}>

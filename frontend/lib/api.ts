@@ -414,6 +414,7 @@ export type OpportunityDetail = {
   contacts: Contact[];
   briefing: Briefing | null;
   company: Company | null;
+  source: JobSource | null;
 };
 
 export async function fetchOpportunityDetail(oppId: string): Promise<OpportunityDetail> {
@@ -605,5 +606,25 @@ export async function createContact(body: {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`create contact failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- job sources (spec: jobsource-attribution) -----
+
+export type JobSource = {
+  id: string;
+  name: string;
+  kind: string;
+  url: string | null;
+  saved_query: string | null;
+  last_checked_at: string | null;
+  referrer_contact_id: number | null;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchJobSources(): Promise<JobSource[]> {
+  const res = await fetch("/api/job-sources");
+  if (!res.ok) throw new Error(`job sources failed: ${res.status}`);
   return res.json();
 }
