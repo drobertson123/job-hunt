@@ -25,6 +25,7 @@ from app.routers import (
     capabilities,
     chat,
     communications,
+    companies,
     corpus,
     health,
     notes,
@@ -53,6 +54,7 @@ app.include_router(opportunities.board_router)
 app.include_router(actions.router)
 app.include_router(applications.router)
 app.include_router(communications.router)
+app.include_router(companies.router)
 app.include_router(artifacts.router)
 app.include_router(attention.router)
 app.include_router(corpus.router)

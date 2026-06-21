@@ -79,6 +79,27 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
           )}
         </div>
         {o.summary && <p className="text-slate-700">{o.summary}</p>}
+        {detail.company && (
+          <div className="text-xs text-slate-500">
+            <span className="font-medium">{detail.company.name}</span>
+            {detail.company.industry && ` · ${detail.company.industry}`}
+            {detail.company.size && detail.company.size !== "unknown" && ` · ${detail.company.size}`}
+            {detail.company.ats_vendor && ` · ATS: ${detail.company.ats_vendor}`}
+            {detail.company.careers_url && (
+              <>
+                {" · "}
+                <a
+                  href={detail.company.careers_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 underline"
+                >
+                  careers
+                </a>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <Section title="Briefing" count={detail.briefing ? 1 : 0}>

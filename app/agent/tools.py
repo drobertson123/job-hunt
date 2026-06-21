@@ -28,6 +28,7 @@ from app.models import (
     ArtifactKind,
     CommChannel,
     CommDirection,
+    CompanySize,
     DecisionKind,
     Note,
     OpportunityType,
@@ -228,6 +229,51 @@ async def record_application(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_company",
+    "Create or enrich a company (industry, size, ATS vendor, careers URL, ...). "
+    "Only provided fields are updated; omit a field to leave it unchanged.",
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "domain": {"type": "string"},
+            "industry": {"type": "string"},
+            "size": {
+                "type": "string",
+                "enum": ["startup", "smb", "mid", "large", "enterprise", "unknown"],
+            },
+            "hq_location": {"type": "string"},
+            "careers_url": {"type": "string"},
+            "linkedin_url": {"type": "string"},
+            "ats_vendor": {"type": "string"},
+            "summary": {"type": "string"},
+            "notes": {"type": "string"},
+            "company_id": {"type": "string", "description": "set to enrich an existing company"},
+        },
+        "required": ["name"],
+    },
+)
+async def record_company(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        size = _enum(CompanySize, args["size"], CompanySize.unknown) if args.get("size") else None
+        c = services.upsert_company(
+            s,
+            name=args["name"],
+            domain=args.get("domain"),
+            industry=args.get("industry"),
+            size=size,
+            hq_location=args.get("hq_location"),
+            careers_url=args.get("careers_url"),
+            linkedin_url=args.get("linkedin_url"),
+            ats_vendor=args.get("ats_vendor"),
+            summary=args.get("summary"),
+            notes=args.get("notes"),
+            company_id=args.get("company_id"),
+        )
+        return _ok(f"Recorded company {c.id}: {c.name}.")
+
+
+@tool(
     "record_communication",
     "Log a communication (email/SMS/LinkedIn/phone/in-person) for an opportunity, "
     "with an optional follow-up due date that surfaces in the attention queue.",
@@ -405,6 +451,7 @@ ALL_TOOLS = [
     update_pipeline_status,
     record_action,
     record_application,
+    record_company,
     record_communication,
     synthesize_briefing,
     save_artifact,

@@ -14,6 +14,7 @@ from app.models import (
     Action,
     Artifact,
     Briefing,
+    Company,
     Decision,
     Opportunity,
     OpportunityType,
@@ -93,6 +94,7 @@ def get_opportunity(opp_id: str, session: Session = Depends(get_session)) -> dic
         ).all(),
         "applications": services.list_applications(session, opportunity_id=opp_id),
         "communications": services.list_communications(session, opportunity_id=opp_id),
+        "company": session.get(Company, opp.company_id) if opp.company_id else None,
         "briefing": briefing_service.get_briefing(session, opp_id),
     }
 
