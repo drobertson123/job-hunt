@@ -51,15 +51,23 @@ def oauth_callback(
     )
 
 
+def _access_token(session: Session) -> str:
+    """Resolve a Google access token, surfacing a not-connected state as a clean 400."""
+    try:
+        return go.get_access_token(session, now=_utcnow())
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/calendar/sync")
 def calendar_sync(session: Session = Depends(get_session)) -> dict:
-    token = go.get_access_token(session, now=_utcnow())
+    token = _access_token(session)
     return gcal_service.sync_upcoming(session, access_token=token)
 
 
 @router.post("/contacts/import")
 def contacts_import(session: Session = Depends(get_session)) -> dict:
-    token = go.get_access_token(session, now=_utcnow())
+    token = _access_token(session)
     return gcontacts_service.import_contacts(session, access_token=token)
 
 
@@ -70,14 +78,14 @@ def contact_push(contact_id: int, session: Session = Depends(get_session)) -> di
     contact = session.get(Contact, contact_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="contact not found")
-    token = go.get_access_token(session, now=_utcnow())
+    token = _access_token(session)
     rn = gcontacts_service.push_contact(session, contact, access_token=token)
     return {"resource_name": rn}
 
 
 @router.post("/gmail/sync")
 def gmail_sync(query: str = "newer_than:30d", session: Session = Depends(get_session)) -> dict:
-    token = go.get_access_token(session, now=_utcnow())
+    token = _access_token(session)
     email = (go.status(session).get("email")) or ""
     if not email:
         # Backfill the account email (needed to label inbound vs outbound correctly).

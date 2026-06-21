@@ -79,3 +79,9 @@ def test_contacts_import_endpoint(client, monkeypatch):
 
 def test_contact_push_404(client):
     assert client.post("/api/google/contacts/999999/push").status_code in (401, 404)
+
+
+def test_sync_before_connect_returns_400(client):
+    # not connected → get_access_token raises RuntimeError → clean 400 (not 500)
+    assert client.post("/api/google/calendar/sync").status_code == 400
+    assert client.post("/api/google/contacts/import").status_code == 400
