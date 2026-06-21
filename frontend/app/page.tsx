@@ -34,6 +34,7 @@ import CompaniesTab from "./components/CompaniesTab";
 import ActionsTab from "./components/ActionsTab";
 import InterviewsTab from "./components/InterviewsTab";
 import SourcesTab from "./components/SourcesTab";
+import WeeklyTab from "./components/WeeklyTab";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -52,7 +53,7 @@ export default function Home() {
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [canvasTab, setCanvasTab] = useState<
-    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources"
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions" | "interviews" | "sources" | "weekly"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const [attentionCount, setAttentionCount] = useState(0);
@@ -360,6 +361,16 @@ export default function Home() {
             >
               Sources
             </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "weekly"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("weekly")}
+            >
+              This week
+            </button>
           </div>
           {canvasTab === "profile" ? (
             <ProfileTab />
@@ -406,6 +417,13 @@ export default function Home() {
             />
           ) : canvasTab === "sources" ? (
             <SourcesTab />
+          ) : canvasTab === "weekly" ? (
+            <WeeklyTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
           ) : (
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {artifacts.length === 0 && notes.length === 0 && (
