@@ -11,15 +11,24 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.models import (
     Action,
     ActionKind,
     ActionStatus,
+    Application,
+    ApplicationStatus,
     Artifact,
     ArtifactFormat,
     ArtifactKind,
+    CommChannel,
+    CommDirection,
+    Communication,
+    Company,
+    CompanySize,
+    Contact,
     Decision,
     DecisionKind,
     Opportunity,
@@ -279,3 +288,184 @@ def record_decision(
     session.commit()
     session.refresh(decision)
     return decision
+
+
+# --- Applications ---------------------------------------------------------- #
+
+
+def record_application(
+    session: Session,
+    *,
+    opportunity_id: str,
+    status: ApplicationStatus = ApplicationStatus.draft,
+    company_id: str | None = None,
+    portal_url: str | None = None,
+    external_id: str | None = None,
+    submitted_at: datetime | None = None,
+    login_hint: str | None = None,
+    notes: str = "",
+    application_id: str | None = None,
+) -> Application:
+    app_row = session.get(Application, application_id) if application_id else None
+    if app_row is None:
+        app_row = Application(opportunity_id=opportunity_id)
+    # ponytail: full overwrite from args — caller sends the intended state.
+    app_row.opportunity_id = opportunity_id
+    app_row.status = status
+    app_row.company_id = company_id
+    app_row.portal_url = portal_url
+    app_row.external_id = external_id
+    app_row.submitted_at = submitted_at
+    app_row.login_hint = login_hint
+    app_row.notes = notes
+    app_row.updated_at = _utcnow()
+    session.add(app_row)
+    opp = session.get(Opportunity, opportunity_id)
+    if opp:
+        opp.last_activity_at = _utcnow()
+        session.add(opp)
+    session.commit()
+    session.refresh(app_row)
+    return app_row
+
+
+def list_applications(
+    session: Session, opportunity_id: str | None = None
+) -> list[Application]:
+    q = select(Application)
+    if opportunity_id:
+        q = q.where(Application.opportunity_id == opportunity_id)
+    return list(session.exec(q.order_by(Application.created_at.desc())).all())
+
+
+# --- Communications --------------------------------------------------------- #
+
+
+def record_communication(
+    session: Session,
+    *,
+    direction: CommDirection,
+    channel: CommChannel,
+    opportunity_id: str | None = None,
+    contact_id: int | None = None,
+    company_id: str | None = None,
+    subject: str = "",
+    body: str = "",
+    occurred_at: datetime | None = None,
+    thread_key: str | None = None,
+    follow_up_due_at: datetime | None = None,
+    communication_id: int | None = None,
+) -> Communication:
+    row = session.get(Communication, communication_id) if communication_id else None
+    if row is None:
+        row = Communication(direction=direction, channel=channel)
+    # ponytail: overwrite from args (caller sends intended state); occurred_at is
+    # guarded because the column is non-null with a model default.
+    row.direction = direction
+    row.channel = channel
+    row.opportunity_id = opportunity_id
+    row.contact_id = contact_id
+    row.company_id = company_id
+    row.subject = subject
+    row.body = body
+    if occurred_at is not None:
+        row.occurred_at = occurred_at
+    row.thread_key = thread_key
+    row.follow_up_due_at = follow_up_due_at
+    session.add(row)
+    if opportunity_id:
+        opp = session.get(Opportunity, opportunity_id)
+        if opp:
+            opp.last_activity_at = _utcnow()
+            session.add(opp)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def list_communications(
+    session: Session, opportunity_id: str | None = None
+) -> list[Communication]:
+    q = select(Communication)
+    if opportunity_id:
+        q = q.where(Communication.opportunity_id == opportunity_id)
+    return list(session.exec(q.order_by(Communication.occurred_at.desc())).all())
+
+
+# --- Companies ------------------------------------------------------------ #
+
+
+def upsert_company(
+    session: Session,
+    *,
+    name: str,
+    domain: str | None = None,
+    industry: str | None = None,
+    size: CompanySize | None = None,
+    hq_location: str | None = None,
+    careers_url: str | None = None,
+    linkedin_url: str | None = None,
+    ats_vendor: str | None = None,
+    summary: str | None = None,
+    notes: str | None = None,
+    company_id: str | None = None,
+) -> Company:
+    row = session.get(Company, company_id) if company_id else None
+    if row is None:
+        row = session.exec(
+            select(Company).where(func.lower(Company.name) == name.strip().lower())
+        ).first()
+    if row is None:
+        row = Company(name=name.strip())
+    # Incremental: only non-None args overwrite (mirrors upsert_opportunity).
+    if domain is not None:
+        row.domain = domain
+    if industry is not None:
+        row.industry = industry
+    if size is not None:
+        row.size = size
+    if hq_location is not None:
+        row.hq_location = hq_location
+    if careers_url is not None:
+        row.careers_url = careers_url
+    if linkedin_url is not None:
+        row.linkedin_url = linkedin_url
+    if ats_vendor is not None:
+        row.ats_vendor = ats_vendor
+    if summary is not None:
+        row.summary = summary
+    if notes is not None:
+        row.notes = notes
+    row.updated_at = _utcnow()
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def list_companies(session: Session) -> list[Company]:
+    return list(session.exec(select(Company).order_by(func.lower(Company.name))).all())
+
+
+def backfill_company_ids(session: Session) -> dict[str, int]:
+    opportunities_linked = 0
+    for opp in session.exec(select(Opportunity)).all():
+        if opp.organization and opp.organization.strip() and opp.company_id is None:
+            c = upsert_company(session, name=opp.organization)
+            opp.company_id = c.id
+            session.add(opp)
+            opportunities_linked += 1
+    contacts_linked = 0
+    for ct in session.exec(select(Contact)).all():
+        if ct.organization and ct.organization.strip() and ct.company_id is None:
+            c = upsert_company(session, name=ct.organization)
+            ct.company_id = c.id
+            session.add(ct)
+            contacts_linked += 1
+    session.commit()
+    total = len(session.exec(select(Company)).all())
+    return {
+        "opportunities_linked": opportunities_linked,
+        "contacts_linked": contacts_linked,
+        "companies": total,
+    }

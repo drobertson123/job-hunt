@@ -8,11 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app import services
+from app import briefing_service, services
 from app.db import get_session
 from app.models import (
     Action,
     Artifact,
+    Briefing,
+    Company,
     Decision,
     Opportunity,
     OpportunityType,
@@ -90,7 +92,28 @@ def get_opportunity(opp_id: str, session: Session = Depends(get_session)) -> dic
             .where(Decision.opportunity_id == opp_id)
             .order_by(Decision.created_at.desc())
         ).all(),
+        "applications": services.list_applications(session, opportunity_id=opp_id),
+        "communications": services.list_communications(session, opportunity_id=opp_id),
+        "company": session.get(Company, opp.company_id) if opp.company_id else None,
+        "briefing": briefing_service.get_briefing(session, opp_id),
     }
+
+
+@router.post("/{opp_id}/briefing/synthesize", response_model=Briefing)
+async def synthesize_briefing_endpoint(
+    opp_id: str, session: Session = Depends(get_session)
+) -> Briefing:
+    try:
+        return await briefing_service.synthesize_briefing(session, opportunity_id=opp_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/{opp_id}/briefing", response_model=Briefing | None)
+def get_briefing_endpoint(
+    opp_id: str, session: Session = Depends(get_session)
+) -> Briefing | None:
+    return briefing_service.get_briefing(session, opp_id)
 
 
 @router.patch("/{opp_id}/stage")

@@ -152,6 +152,8 @@ class Opportunity(SQLModel, table=True):
     # value_estimate, deadline, ...}.
     details: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     dedupe_key: str | None = Field(default=None, index=True)  # idempotent upsert
+    company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
+    source_id: str | None = Field(default=None, foreign_key="job_sources.id", index=True)
     archived: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
@@ -268,6 +270,7 @@ class Contact(SQLModel, table=True):
     name: str
     role: str | None = None
     organization: str | None = None
+    company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
     link: str | None = None
     notes: str = ""
     created_at: datetime = Field(default_factory=_utcnow)
@@ -355,4 +358,162 @@ class GroundingReport(SQLModel, table=True):
     findings: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
     checked_count: int = 0
     unsupported_count: int = 0
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+# --------------------------------------------------------------------------- #
+# Relationship models: Company, JobSource, Application, Communication, Briefing.
+# Normalize loose strings (organization/source) and capture applications, comms,
+# and structured briefings. See
+# docs/superpowers/specs/2026-06-20-relationship-models-design.md.
+# --------------------------------------------------------------------------- #
+
+
+class CompanySize(str, Enum):
+    startup = "startup"
+    smb = "smb"
+    mid = "mid"
+    large = "large"
+    enterprise = "enterprise"
+    unknown = "unknown"
+
+
+class Company(SQLModel, table=True):
+    __tablename__ = "companies"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    name: str
+    domain: str | None = Field(default=None, index=True)
+    industry: str | None = None
+    size: CompanySize = Field(default=CompanySize.unknown)
+    hq_location: str | None = None
+    careers_url: str | None = None
+    linkedin_url: str | None = None
+    ats_vendor: str | None = None  # Greenhouse | Lever | Workday | Ashby | ...
+    summary: str | None = None
+    notes: str = ""
+    details: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class JobSourceKind(str, Enum):
+    job_board = "job_board"
+    company_site = "company_site"
+    referral = "referral"
+    recruiter = "recruiter"
+    social = "social"
+    aggregator = "aggregator"
+    other = "other"
+
+
+class JobSource(SQLModel, table=True):
+    __tablename__ = "job_sources"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    name: str
+    kind: JobSourceKind = Field(default=JobSourceKind.other)
+    url: str | None = None
+    saved_query: str | None = None  # discovery-ready feed; not polled yet
+    last_checked_at: datetime | None = None
+    referrer_contact_id: int | None = Field(
+        default=None, foreign_key="contacts.id", index=True
+    )
+    notes: str = ""
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ApplicationStatus(str, Enum):
+    draft = "draft"
+    submitted = "submitted"
+    under_review = "under_review"
+    interviewing = "interviewing"
+    offer = "offer"
+    rejected = "rejected"
+    withdrawn = "withdrawn"
+
+
+class Application(SQLModel, table=True):
+    __tablename__ = "applications"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    opportunity_id: str = Field(foreign_key="opportunities.id", index=True)
+    company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
+    status: ApplicationStatus = Field(default=ApplicationStatus.draft, index=True)
+    portal_url: str | None = None
+    external_id: str | None = None  # their application ID
+    submitted_at: datetime | None = None
+    login_hint: str | None = None
+    notes: str = ""
+    details: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class CommDirection(str, Enum):
+    inbound = "inbound"
+    outbound = "outbound"
+
+
+class CommChannel(str, Enum):
+    email = "email"
+    sms = "sms"
+    linkedin = "linkedin"
+    phone = "phone"
+    in_person = "in_person"
+    other = "other"
+
+
+class Communication(SQLModel, table=True):
+    __tablename__ = "communications"
+
+    id: int | None = Field(default=None, primary_key=True)
+    opportunity_id: str | None = Field(
+        default=None, foreign_key="opportunities.id", index=True
+    )
+    contact_id: int | None = Field(default=None, foreign_key="contacts.id", index=True)
+    company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
+    direction: CommDirection
+    channel: CommChannel
+    subject: str = ""
+    body: str = ""
+    occurred_at: datetime = Field(default_factory=_utcnow, index=True)
+    thread_key: str | None = Field(default=None, index=True)
+    follow_up_due_at: datetime | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+class BriefingFactKey(str, Enum):
+    """Fixed 'expected questions' a briefing should aim to answer; `other`
+    covers freeform extras. Presence enforcement is a service concern."""
+
+    salary_range = "salary_range"
+    location = "location"
+    remote_policy = "remote_policy"
+    tech_stack = "tech_stack"
+    team = "team"
+    seniority = "seniority"
+    interview_process = "interview_process"
+    company_health = "company_health"
+    why_fit = "why_fit"
+    concerns = "concerns"
+    other = "other"
+
+
+class Briefing(SQLModel, table=True):
+    __tablename__ = "briefings"
+
+    id: int | None = Field(default=None, primary_key=True)
+    opportunity_id: str | None = Field(
+        default=None, foreign_key="opportunities.id", index=True
+    )
+    company_id: str | None = Field(default=None, foreign_key="companies.id", index=True)
+    summary: str = ""
+    # Each fact: {key: BriefingFactKey value, question, answer,
+    #            confidence: float|None, source: str|None}
+    facts: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    source_hash: str | None = None  # staleness marker (cf. GroundingReport)
+    generated_run_id: str | None = Field(default=None, foreign_key="runs.id", index=True)
+    refreshed_at: datetime = Field(default_factory=_utcnow)
     created_at: datetime = Field(default_factory=_utcnow)

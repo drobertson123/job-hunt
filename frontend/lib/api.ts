@@ -28,6 +28,19 @@ export type Artifact = {
   created_at: string;
 };
 
+export type Application = {
+  id: string;
+  opportunity_id: string;
+  company_id: string | null;
+  status: string;
+  portal_url: string | null;
+  external_id: string | null;
+  submitted_at: string | null;
+  login_hint: string | null;
+  notes: string;
+  created_at: string;
+};
+
 export type Opportunity = {
   id: string;
   title: string;
@@ -131,6 +144,12 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
 export async function fetchArtifacts(): Promise<Artifact[]> {
   const res = await fetch("/api/artifacts");
   if (!res.ok) throw new Error(`artifacts failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchApplications(): Promise<Application[]> {
+  const res = await fetch("/api/applications");
+  if (!res.ok) throw new Error(`applications failed: ${res.status}`);
   return res.json();
 }
 
@@ -308,5 +327,244 @@ export async function getGrounding(id: number): Promise<GroundingReport | null> 
 export async function approveArtifact(id: number): Promise<Artifact> {
   const res = await fetch(`/api/artifacts/${id}/approve`, { method: "POST" });
   if (!res.ok) await throwDetail(res, `approve failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- briefing synthesis (spec: briefing-synthesis) -----
+
+export type BriefingFact = {
+  key: string;
+  question: string;
+  answer: string;
+  confidence: number | null;
+  source: string | null;
+};
+
+export type Briefing = {
+  id: number;
+  opportunity_id: string | null;
+  company_id: string | null;
+  summary: string;
+  facts: BriefingFact[];
+  source_hash: string | null;
+  generated_run_id: string | null;
+  refreshed_at: string;
+  created_at: string;
+};
+
+export async function fetchBriefing(oppId: string): Promise<Briefing | null> {
+  const res = await fetch(`/api/opportunities/${oppId}/briefing`);
+  if (!res.ok) throw new Error(`briefing failed: ${res.status}`);
+  return res.json();
+}
+
+export async function synthesizeBriefing(oppId: string): Promise<Briefing> {
+  const res = await fetch(`/api/opportunities/${oppId}/briefing/synthesize`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`synthesize briefing failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- opportunity detail (spec: opportunity-detail) -----
+
+export type OpportunityFull = {
+  id: string;
+  type: string;
+  title: string;
+  organization: string | null;
+  source: string | null;
+  url: string | null;
+  location: string | null;
+  stage: string;
+  fit_score: number | null;
+  summary: string | null;
+  details: Record<string, unknown>;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+  last_activity_at: string;
+};
+
+export type Action = {
+  id: number;
+  title: string;
+  detail: string;
+  kind: string;
+  status: string;
+  due_at: string | null;
+  opportunity_id: string | null;
+};
+
+export type Decision = {
+  id: number;
+  kind: string;
+  summary: string;
+  rationale: string;
+  created_at: string;
+};
+
+export type OpportunityDetail = {
+  opportunity: OpportunityFull;
+  actions: Action[];
+  artifacts: Artifact[];
+  decisions: Decision[];
+  applications: Application[];
+  communications: Communication[];
+  briefing: Briefing | null;
+  company: Company | null;
+};
+
+export async function fetchOpportunityDetail(oppId: string): Promise<OpportunityDetail> {
+  const res = await fetch(`/api/opportunities/${oppId}`);
+  if (!res.ok) throw new Error(`opportunity detail failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- pipeline board (spec: pipeline-board) -----
+
+export type PipelineBoard = {
+  columns: string[];
+  by_stage: Record<string, OpportunityFull[]>;
+};
+
+export async function fetchPipeline(type?: "job" | "business"): Promise<PipelineBoard> {
+  const qs = type ? `?type=${type}` : "";
+  const res = await fetch(`/api/pipeline${qs}`);
+  if (!res.ok) throw new Error(`pipeline failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateStage(
+  oppId: string,
+  stage: string,
+  rationale: string,
+): Promise<OpportunityFull> {
+  const res = await fetch(`/api/opportunities/${oppId}/stage`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stage, rationale }),
+  });
+  if (!res.ok) throw new Error(`update stage failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- attention dashboard (spec: attention-dashboard) -----
+
+export type AttentionItem = {
+  kind: string; // "overdue_action" | "stale_opportunity" | "untriaged_opportunity"
+  severity: string; // "high" | "medium" | ...
+  opportunity_id: string | null;
+  title: string;
+  reason: string;
+  action_id?: number;
+  due_at?: string | null;
+  stage?: string;
+  last_activity_at?: string;
+};
+
+export type Attention = {
+  items: AttentionItem[];
+  counts: {
+    overdue_actions: number;
+    stale_opportunities: number;
+    untriaged_opportunities: number;
+    overdue_followups: number;
+    total: number;
+  };
+};
+
+export async function fetchAttention(): Promise<Attention> {
+  const res = await fetch("/api/attention");
+  if (!res.ok) throw new Error(`attention failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- communications (spec: comms-log) -----
+
+export type Communication = {
+  id: number;
+  opportunity_id: string | null;
+  contact_id: number | null;
+  company_id: string | null;
+  direction: string;
+  channel: string;
+  subject: string;
+  body: string;
+  occurred_at: string;
+  thread_key: string | null;
+  follow_up_due_at: string | null;
+  created_at: string;
+};
+
+export async function fetchCommunications(oppId?: string): Promise<Communication[]> {
+  const qs = oppId ? `?opportunity_id=${oppId}` : "";
+  const res = await fetch(`/api/communications${qs}`);
+  if (!res.ok) throw new Error(`communications failed: ${res.status}`);
+  return res.json();
+}
+
+// ----- company normalization (spec: company-normalization) -----
+
+export type Company = {
+  id: string;
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  size: string;
+  hq_location: string | null;
+  careers_url: string | null;
+  linkedin_url: string | null;
+  ats_vendor: string | null;
+  summary: string | null;
+  notes: string;
+  created_at: string;
+};
+
+export async function fetchCompanies(): Promise<Company[]> {
+  const res = await fetch("/api/companies");
+  if (!res.ok) throw new Error(`companies failed: ${res.status}`);
+  return res.json();
+}
+
+export async function backfillCompanies(): Promise<{
+  opportunities_linked: number;
+  contacts_linked: number;
+  companies: number;
+}> {
+  const res = await fetch("/api/companies/backfill", { method: "POST" });
+  if (!res.ok) throw new Error(`backfill failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchActions(status?: string, opportunityId?: string): Promise<Action[]> {
+  const p = new URLSearchParams();
+  if (status) p.set("status", status);
+  if (opportunityId) p.set("opportunity_id", opportunityId);
+  const qs = p.toString();
+  const res = await fetch(`/api/actions${qs ? `?${qs}` : ""}`);
+  if (!res.ok) throw new Error(`actions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createAction(body: {
+  title: string;
+  kind?: string;
+  detail?: string;
+  due_at?: string | null;
+  opportunity_id?: string | null;
+}): Promise<Action> {
+  const res = await fetch("/api/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create action failed: ${res.status}`);
+  return res.json();
+}
+
+export async function completeAction(id: number): Promise<Action> {
+  const res = await fetch(`/api/actions/${id}/complete`, { method: "POST" });
+  if (!res.ok) throw new Error(`complete action failed: ${res.status}`);
   return res.json();
 }

@@ -35,6 +35,10 @@ def init_db() -> None:
     SQLModel.metadata.create_all(engine)
     # Slice C: pre-existing DBs have artifacts without review_status.
     _ensure_column(engine, "artifacts", "review_status", "VARCHAR DEFAULT 'draft'")
+    # Relationship models: pre-existing DBs lack these FK columns.
+    _ensure_column(engine, "opportunities", "company_id", "VARCHAR")
+    _ensure_column(engine, "opportunities", "source_id", "VARCHAR")
+    _ensure_column(engine, "contacts", "company_id", "VARCHAR")
 
 
 def get_session() -> Iterator[Session]:

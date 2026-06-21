@@ -19,12 +19,16 @@ from typing import Any, TypeVar
 from claude_agent_sdk import create_sdk_mcp_server, tool
 from sqlmodel import Session
 
-from app import corpus_service, services
+from app import briefing_service, corpus_service, services
 from app.db import engine
 from app.models import (
     ActionKind,
+    ApplicationStatus,
     ArtifactFormat,
     ArtifactKind,
+    CommChannel,
+    CommDirection,
+    CompanySize,
     DecisionKind,
     Note,
     OpportunityType,
@@ -179,6 +183,169 @@ async def record_action(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @tool(
+    "record_application",
+    "Record or update a job application to an opportunity (ATS/portal + status).",
+    {
+        "type": "object",
+        "properties": {
+            "opportunity_id": {"type": "string"},
+            "status": {
+                "type": "string",
+                "enum": ["draft", "submitted", "under_review", "interviewing",
+                         "offer", "rejected", "withdrawn"],
+            },
+            "company_id": {"type": "string"},
+            "portal_url": {"type": "string"},
+            "external_id": {"type": "string"},
+            "submitted_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "login_hint": {"type": "string"},
+            "notes": {"type": "string"},
+            "application_id": {
+                "type": "string",
+                "description": "set to update an existing application",
+            },
+        },
+        "required": ["opportunity_id"],
+    },
+)
+async def record_application(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        app_row = services.record_application(
+            s,
+            opportunity_id=args["opportunity_id"],
+            status=_enum(ApplicationStatus, args.get("status"), ApplicationStatus.draft),
+            company_id=args.get("company_id"),
+            portal_url=args.get("portal_url"),
+            external_id=args.get("external_id"),
+            submitted_at=_parse_dt(args.get("submitted_at")),
+            login_hint=args.get("login_hint"),
+            notes=args.get("notes") or "",
+            application_id=args.get("application_id"),
+        )
+        return _ok(
+            f"Recorded application {app_row.id} "
+            f"({app_row.status.value}) for opportunity {app_row.opportunity_id}."
+        )
+
+
+@tool(
+    "record_company",
+    "Create or enrich a company (industry, size, ATS vendor, careers URL, ...). "
+    "Only provided fields are updated; omit a field to leave it unchanged.",
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "domain": {"type": "string"},
+            "industry": {"type": "string"},
+            "size": {
+                "type": "string",
+                "enum": ["startup", "smb", "mid", "large", "enterprise", "unknown"],
+            },
+            "hq_location": {"type": "string"},
+            "careers_url": {"type": "string"},
+            "linkedin_url": {"type": "string"},
+            "ats_vendor": {"type": "string"},
+            "summary": {"type": "string"},
+            "notes": {"type": "string"},
+            "company_id": {"type": "string", "description": "set to enrich an existing company"},
+        },
+        "required": ["name"],
+    },
+)
+async def record_company(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        size = _enum(CompanySize, args["size"], CompanySize.unknown) if args.get("size") else None
+        c = services.upsert_company(
+            s,
+            name=args["name"],
+            domain=args.get("domain"),
+            industry=args.get("industry"),
+            size=size,
+            hq_location=args.get("hq_location"),
+            careers_url=args.get("careers_url"),
+            linkedin_url=args.get("linkedin_url"),
+            ats_vendor=args.get("ats_vendor"),
+            summary=args.get("summary"),
+            notes=args.get("notes"),
+            company_id=args.get("company_id"),
+        )
+        return _ok(f"Recorded company {c.id}: {c.name}.")
+
+
+@tool(
+    "record_communication",
+    "Log a communication (email/SMS/LinkedIn/phone/in-person) for an opportunity, "
+    "with an optional follow-up due date that surfaces in the attention queue.",
+    {
+        "type": "object",
+        "properties": {
+            "direction": {"type": "string", "enum": ["inbound", "outbound"]},
+            "channel": {
+                "type": "string",
+                "enum": ["email", "sms", "linkedin", "phone", "in_person", "other"],
+            },
+            "opportunity_id": {"type": "string"},
+            "contact_id": {"type": "integer"},
+            "company_id": {"type": "string"},
+            "subject": {"type": "string"},
+            "body": {"type": "string"},
+            "occurred_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "thread_key": {"type": "string"},
+            "follow_up_due_at": {"type": "string", "description": "ISO 8601 datetime"},
+            "communication_id": {
+                "type": "integer",
+                "description": "set to update an existing communication",
+            },
+        },
+        "required": ["direction", "channel"],
+    },
+)
+async def record_communication(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        c = services.record_communication(
+            s,
+            direction=_enum(CommDirection, args.get("direction"), CommDirection.outbound),
+            channel=_enum(CommChannel, args.get("channel"), CommChannel.other),
+            opportunity_id=args.get("opportunity_id"),
+            contact_id=args.get("contact_id"),
+            company_id=args.get("company_id"),
+            subject=args.get("subject") or "",
+            body=args.get("body") or "",
+            occurred_at=_parse_dt(args.get("occurred_at")),
+            thread_key=args.get("thread_key"),
+            follow_up_due_at=_parse_dt(args.get("follow_up_due_at")),
+            communication_id=args.get("communication_id"),
+        )
+        return _ok(
+            f"Logged {c.direction.value} {c.channel.value} communication {c.id}."
+        )
+
+
+@tool(
+    "synthesize_briefing",
+    "Synthesize a structured briefing (salary, remote, tech stack, why-fit, "
+    "concerns, ...) for an opportunity, grounded in its data and the user's corpus.",
+    {
+        "type": "object",
+        "properties": {"opportunity_id": {"type": "string"}},
+        "required": ["opportunity_id"],
+    },
+)
+async def synthesize_briefing(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        briefing = await briefing_service.synthesize_briefing(
+            s,
+            opportunity_id=args["opportunity_id"],
+            generated_run_id=current_run_id.get(),
+        )
+        return _ok(
+            f"Synthesized briefing for opportunity {briefing.opportunity_id} "
+            f"({len(briefing.facts)} facts)."
+        )
+
+
+@tool(
     "save_artifact",
     "Save a generated deliverable (CV, cover letter, research brief, etc.) as a "
     "versioned artifact linked to an opportunity. It appears in the canvas.",
@@ -283,6 +450,10 @@ ALL_TOOLS = [
     save_opportunity,
     update_pipeline_status,
     record_action,
+    record_application,
+    record_company,
+    record_communication,
+    synthesize_briefing,
     save_artifact,
     record_decision,
     search_corpus,

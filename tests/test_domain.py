@@ -12,6 +12,9 @@ from app.models import (
     Action,
     ActionKind,
     ArtifactKind,
+    CommChannel,
+    CommDirection,
+    Communication,
     Decision,
     DecisionKind,
     Opportunity,
@@ -156,3 +159,35 @@ def test_needs_attention_surfaces_the_right_items():
         assert fresh.id not in ids
         assert any(k[0] == "overdue_action" for k in kinds)
         assert result["counts"]["overdue_actions"] >= 1
+
+
+def test_needs_attention_surfaces_overdue_followup():
+    from datetime import timedelta
+
+    from sqlmodel import Session
+
+    from app.db import engine
+    from app.models import Opportunity, OpportunityType
+    from app.orchestration import needs_attention
+
+    now_past = _naive_now() - timedelta(days=1)
+    now_future = _naive_now() + timedelta(days=1)
+    with Session(engine) as s:
+        o = Opportunity(type=OpportunityType.job, title="ATTN comm")
+        s.add(o)
+        s.commit()
+        s.refresh(o)
+        s.add(Communication(direction=CommDirection.outbound, channel=CommChannel.email,
+                            opportunity_id=o.id, subject="ping", follow_up_due_at=now_past))
+        s.add(Communication(direction=CommDirection.outbound, channel=CommChannel.email,
+                            opportunity_id=o.id, subject="future", follow_up_due_at=now_future))
+        s.add(Communication(direction=CommDirection.inbound, channel=CommChannel.email,
+                            opportunity_id=o.id, subject="none"))  # no follow-up
+        s.commit()
+
+        result = needs_attention(s)
+        kinds = [i["kind"] for i in result["items"]]
+        assert kinds.count("overdue_followup") == 1
+        assert result["counts"]["overdue_followups"] == 1
+        item = next(i for i in result["items"] if i["kind"] == "overdue_followup")
+        assert item["opportunity_id"] == o.id and item["title"] == "ping"

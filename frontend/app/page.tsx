@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AgentEvent,
+  Application,
   Artifact,
   Capability,
   Note,
   Opportunity,
   SettingsView,
+  fetchApplications,
   fetchArtifacts,
   fetchCapabilities,
   fetchNotes,
@@ -18,7 +20,14 @@ import {
   updateSettings,
 } from "@/lib/api";
 import ProfileTab from "./components/ProfileTab";
+import ApplicationsTab from "./components/ApplicationsTab";
 import ArtifactCard from "./components/ArtifactCard";
+import BriefingTab from "./components/BriefingTab";
+import OpportunityDetailTab from "./components/OpportunityDetailTab";
+import BoardTab from "./components/BoardTab";
+import AttentionTab from "./components/AttentionTab";
+import CompaniesTab from "./components/CompaniesTab";
+import ActionsTab from "./components/ActionsTab";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -36,19 +45,24 @@ export default function Home() {
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
-  const [canvasTab, setCanvasTab] = useState<"workspace" | "profile">("workspace");
+  const [canvasTab, setCanvasTab] = useState<
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions"
+  >("workspace");
+  const [applications, setApplications] = useState<Application[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const refreshCanvas = useCallback(async () => {
     try {
-      const [n, a, o] = await Promise.all([
+      const [n, a, o, apps] = await Promise.all([
         fetchNotes(),
         fetchArtifacts(),
         fetchOpportunities(),
+        fetchApplications(),
       ]);
       setNotes(n);
       setArtifacts(a);
       setOpps(o);
+      setApplications(apps);
     } catch {
       /* ignore */
     }
@@ -241,9 +255,113 @@ export default function Home() {
             >
               Profile
             </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "applications"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("applications")}
+            >
+              Applications ({applications.length})
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "briefing"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("briefing")}
+            >
+              Briefing
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "detail"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("detail")}
+            >
+              Detail
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "board"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("board")}
+            >
+              Board
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "attention"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("attention")}
+            >
+              Attention
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "companies"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("companies")}
+            >
+              Companies
+            </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "actions"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("actions")}
+            >
+              Actions
+            </button>
           </div>
           {canvasTab === "profile" ? (
             <ProfileTab />
+          ) : canvasTab === "applications" ? (
+            <ApplicationsTab />
+          ) : canvasTab === "briefing" ? (
+            <BriefingTab opportunityId={selectedOpp} />
+          ) : canvasTab === "detail" ? (
+            <OpportunityDetailTab opportunityId={selectedOpp} />
+          ) : canvasTab === "board" ? (
+            <BoardTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
+          ) : canvasTab === "attention" ? (
+            <AttentionTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
+          ) : canvasTab === "companies" ? (
+            <CompaniesTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
+          ) : canvasTab === "actions" ? (
+            <ActionsTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
           ) : (
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {artifacts.length === 0 && notes.length === 0 && (

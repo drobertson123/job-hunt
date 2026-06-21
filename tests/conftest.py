@@ -47,20 +47,26 @@ def _clear_db():
     from app.db import engine
     from app.models import (
         Action,
+        Application,
         Artifact,
+        Briefing,
         Chunk,
+        Communication,
+        Company,
         Contact,
         Decision,
         Document,
         GroundingReport,
+        JobSource,
         Opportunity,
         Profile,
     )
 
     with Session(engine) as s:
         for model in (
+            Briefing, Communication, Application,
             GroundingReport, Artifact, Action, Decision, Contact,
-            Opportunity, Chunk, Document, Profile,
+            Opportunity, JobSource, Company, Chunk, Document, Profile,
         ):
             s.exec(delete(model))
         s.commit()
