@@ -682,6 +682,7 @@ export type JobSource = {
   kind: string;
   url: string | null;
   saved_query: string | null;
+  auto_search: boolean;
   last_checked_at: string | null;
   referrer_contact_id: number | null;
   notes: string;
@@ -691,5 +692,39 @@ export type JobSource = {
 export async function fetchJobSources(): Promise<JobSource[]> {
   const res = await fetch("/api/job-sources");
   if (!res.ok) throw new Error(`job sources failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createJobSource(body: {
+  name: string;
+  kind?: string;
+  saved_query?: string | null;
+  auto_search?: boolean;
+}): Promise<JobSource> {
+  const res = await fetch("/api/job-sources", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create job source failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateJobSource(
+  id: string,
+  body: { saved_query?: string | null; auto_search?: boolean; name?: string }
+): Promise<JobSource> {
+  const res = await fetch(`/api/job-sources/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`update job source failed: ${res.status}`);
+  return res.json();
+}
+
+export async function runJobSourceSearch(id: string): Promise<{ status: string }> {
+  const res = await fetch(`/api/job-sources/${id}/search`, { method: "POST" });
+  if (!res.ok) throw new Error(`run search failed: ${res.status}`);
   return res.json();
 }
