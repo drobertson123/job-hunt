@@ -17,6 +17,7 @@ const ITEMS: Item[] = [
   { key: "briefing", label: "Briefing", icon: I("M3.5 6h14v11H3.5z M3.5 6V4.5h6V6 M7 10h7M7 13h5") },
   { key: "interviews", label: "Interviews", icon: I("M4 4h13v13H4z M4 8h13 M8 2v3 M13 2v3") },
   { key: "companies", label: "Companies", icon: I("M3 3.5h9v14H3z M12 8h5.5v9.5H12 M5.5 7h1M9 7h1M5.5 10h1M9 10h1") },
+  { key: "contacts", label: "Contacts", icon: I("M8 7.5a3 3 0 100-6 3 3 0 000 6z M2.5 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5 M15 5.2a2.8 2.8 0 010 5.2") },
   { key: "sources", label: "Sources", icon: I("M10.5 16a5.5 5.5 0 100-11 5.5 5.5 0 000 11z M10.5 10.5v.1 M10.5 4v1.5M10.5 15.5V17M4 10.5H2.5M18.5 10.5H17") },
   { key: "library", label: "Library", icon: I("M5 3h11v15H5z M5 3a1.5 1.5 0 000 3h11 M9 7h4") },
   { key: "interviews-cal", label: "Documents", icon: I("M5 3h6l5 5v10H5z M11 3v5h5") },
