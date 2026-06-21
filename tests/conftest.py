@@ -54,6 +54,7 @@ def _clear_db():
         Communication,
         Company,
         Contact,
+        ContentBlock,
         Decision,
         Document,
         GroundingReport,
@@ -69,6 +70,7 @@ def _clear_db():
             Briefing, Communication, Application, InterviewEvent,
             GroundingReport, Artifact, Action, Decision, Contact,
             Opportunity, JobSource, Company, Chunk, Document, Profile, Setting,
+            ContentBlock,
         ):
             s.exec(delete(model))
         s.commit()

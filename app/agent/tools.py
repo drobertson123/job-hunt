@@ -29,6 +29,7 @@ from app.models import (
     CommChannel,
     CommDirection,
     CompanySize,
+    ContentBlockKind,
     DecisionKind,
     InterviewKind,
     JobSourceKind,
@@ -530,6 +531,33 @@ async def record_decision(args: dict[str, Any]) -> dict[str, Any]:
         return _ok(f"Recorded decision #{d.id}.")
 
 
+@tool(
+    "save_content_block",
+    "Save a reusable career content block (headline, summary, or achievement bullet) to the library.",
+    {
+        "type": "object",
+        "properties": {
+            "text": {"type": "string"},
+            "kind": {"type": "string", "enum": ["headline", "summary", "bullet", "other"]},
+            "audience": {"type": "string", "description": "positioning tag, e.g. technical / leadership"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["text"],
+    },
+)
+async def save_content_block(args: dict[str, Any]) -> dict[str, Any]:
+    with Session(engine) as s:
+        block = services.add_content_block(
+            s,
+            kind=_enum(ContentBlockKind, args.get("kind"), ContentBlockKind.bullet),
+            text=args.get("text") or "",
+            audience=args.get("audience") or "",
+            tags=args.get("tags") or [],
+            provenance="career-pack:content-library",
+        )
+        return _ok(f"Saved content block #{block.id} ({block.kind.value}).")
+
+
 def _corpus_embedder(session: Session):
     """Indirection point: tests monkeypatch this to inject a fake embedder."""
     return corpus_service.default_embedder(session)
@@ -582,6 +610,7 @@ ALL_TOOLS = [
     save_artifact,
     record_decision,
     search_corpus,
+    save_content_block,
 ]
 
 # Tool names the agent is allowed to call (mcp__app__*).

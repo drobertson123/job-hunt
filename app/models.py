@@ -344,6 +344,25 @@ class Profile(SQLModel, table=True):
 # --------------------------------------------------------------------------- #
 
 
+class ContentBlockKind(str, Enum):
+    headline = "headline"
+    summary = "summary"
+    bullet = "bullet"
+    other = "other"
+
+
+class ContentBlock(SQLModel, table=True):
+    __tablename__ = "content_blocks"
+
+    id: int | None = Field(default=None, primary_key=True)
+    kind: ContentBlockKind = ContentBlockKind.bullet
+    audience: str = ""
+    text: str
+    tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    provenance: str | None = None
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
 class GroundingReport(SQLModel, table=True):
     """One current grounding report per artifact (replaced on re-check).
 
