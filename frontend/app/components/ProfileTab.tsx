@@ -10,6 +10,7 @@ import {
   pasteDocument,
   synthesizeProfile,
   updatePinnedSkills,
+  updatePreferences,
   uploadDocument,
 } from "@/lib/api";
 import MarkdownView from "./MarkdownView";
@@ -23,6 +24,9 @@ export default function ProfileTab() {
   const [busy, setBusy] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
   const [skillInput, setSkillInput] = useState("");
+  const [dealbreakersInput, setDealbreakersInput] = useState("");
+  const [mustHavesInput, setMustHavesInput] = useState("");
+  const [niceToHavesInput, setNiceToHavesInput] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -165,6 +169,191 @@ export default function ProfileTab() {
           >
             Add
           </button>
+        </div>
+      </section>
+
+      <hr />
+
+      <section>
+        <h3 className="text-sm font-medium text-slate-600">Preferences</h3>
+
+        {/* Dealbreakers */}
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500">
+            Dealbreakers <span className="normal-case font-normal text-slate-400">— any of these → Skip</span>
+          </h4>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(profile?.dealbreakers ?? []).map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-xs text-white"
+              >
+                {s}
+                <button
+                  aria-label={`Remove ${s}`}
+                  className="leading-none hover:text-slate-300"
+                  onClick={() =>
+                    updatePreferences({ dealbreakers: (profile?.dealbreakers ?? []).filter((x) => x !== s) }).then(
+                      setProfile,
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              placeholder="Add a dealbreaker…"
+              value={dealbreakersInput}
+              onChange={(e) => setDealbreakersInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && dealbreakersInput.trim()) {
+                  updatePreferences({ dealbreakers: [...(profile?.dealbreakers ?? []), dealbreakersInput.trim()] }).then(
+                    (p) => {
+                      setProfile(p);
+                      setDealbreakersInput("");
+                    },
+                  );
+                }
+              }}
+            />
+            <button
+              className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              disabled={!dealbreakersInput.trim()}
+              onClick={() => {
+                if (!dealbreakersInput.trim()) return;
+                updatePreferences({ dealbreakers: [...(profile?.dealbreakers ?? []), dealbreakersInput.trim()] }).then(
+                  (p) => {
+                    setProfile(p);
+                    setDealbreakersInput("");
+                  },
+                );
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Must-haves */}
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500">Must-haves</h4>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(profile?.must_haves ?? []).map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs text-white"
+              >
+                {s}
+                <button
+                  aria-label={`Remove ${s}`}
+                  className="leading-none hover:text-slate-300"
+                  onClick={() =>
+                    updatePreferences({ must_haves: (profile?.must_haves ?? []).filter((x) => x !== s) }).then(
+                      setProfile,
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              placeholder="Add a must-have…"
+              value={mustHavesInput}
+              onChange={(e) => setMustHavesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && mustHavesInput.trim()) {
+                  updatePreferences({ must_haves: [...(profile?.must_haves ?? []), mustHavesInput.trim()] }).then(
+                    (p) => {
+                      setProfile(p);
+                      setMustHavesInput("");
+                    },
+                  );
+                }
+              }}
+            />
+            <button
+              className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              disabled={!mustHavesInput.trim()}
+              onClick={() => {
+                if (!mustHavesInput.trim()) return;
+                updatePreferences({ must_haves: [...(profile?.must_haves ?? []), mustHavesInput.trim()] }).then(
+                  (p) => {
+                    setProfile(p);
+                    setMustHavesInput("");
+                  },
+                );
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Nice-to-haves */}
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500">Nice-to-haves</h4>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(profile?.nice_to_haves ?? []).map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded bg-slate-500 px-2 py-0.5 text-xs text-white"
+              >
+                {s}
+                <button
+                  aria-label={`Remove ${s}`}
+                  className="leading-none hover:text-slate-300"
+                  onClick={() =>
+                    updatePreferences({ nice_to_haves: (profile?.nice_to_haves ?? []).filter((x) => x !== s) }).then(
+                      setProfile,
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              placeholder="Add a nice-to-have…"
+              value={niceToHavesInput}
+              onChange={(e) => setNiceToHavesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && niceToHavesInput.trim()) {
+                  updatePreferences({ nice_to_haves: [...(profile?.nice_to_haves ?? []), niceToHavesInput.trim()] }).then(
+                    (p) => {
+                      setProfile(p);
+                      setNiceToHavesInput("");
+                    },
+                  );
+                }
+              }}
+            />
+            <button
+              className="rounded bg-slate-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              disabled={!niceToHavesInput.trim()}
+              onClick={() => {
+                if (!niceToHavesInput.trim()) return;
+                updatePreferences({ nice_to_haves: [...(profile?.nice_to_haves ?? []), niceToHavesInput.trim()] }).then(
+                  (p) => {
+                    setProfile(p);
+                    setNiceToHavesInput("");
+                  },
+                );
+              }}
+            >
+              Add
+            </button>
+          </div>
         </div>
       </section>
 
