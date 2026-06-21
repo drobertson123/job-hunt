@@ -9,6 +9,7 @@ const GROUPS: { kind: string; label: string }[] = [
   { kind: "overdue_action", label: "Overdue actions" },
   { kind: "stale_opportunity", label: "Stale opportunities" },
   { kind: "untriaged_opportunity", label: "Untriaged opportunities" },
+  { kind: "untriaged_message", label: "Untriaged messages" },
 ];
 
 function sevColor(severity: string): string {
