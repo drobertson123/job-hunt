@@ -11,6 +11,7 @@ import {
   reopenAction,
   snoozeAction,
 } from "@/lib/api";
+import FetchError from "./FetchError";
 
 type Filter = "open" | "done" | "all";
 const KINDS = ["followup", "apply", "research", "prep", "outreach", "decision", "other"];
@@ -23,11 +24,18 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
   const [kind, setKind] = useState("other");
   const [dueAt, setDueAt] = useState("");
   const [oppId, setOppId] = useState("");
+  const [error, setError] = useState(false);
 
   const load = useCallback(() => {
     fetchActions(filter === "all" ? undefined : filter)
-      .then(setActions)
-      .catch(() => setActions([]));
+      .then((a) => {
+        setActions(a);
+        setError(false);
+      })
+      .catch(() => {
+        setActions([]);
+        setError(true);
+      });
   }, [filter]);
 
   useEffect(() => {
@@ -54,6 +62,8 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
 
   const titleFor = (id: string | null) =>
     id ? opps.find((o) => o.id === id)?.title ?? id : null;
+
+  if (error) return <FetchError onRetry={load} />;
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm">

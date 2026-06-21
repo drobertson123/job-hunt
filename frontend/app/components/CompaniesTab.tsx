@@ -8,15 +8,26 @@ import {
   fetchCompanies,
   fetchOpportunities,
 } from "@/lib/api";
+import FetchError from "./FetchError";
 
 export default function CompaniesTab({ onOpen }: { onOpen: (oppId: string) => void }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(() => {
-    fetchCompanies().then(setCompanies).catch(() => setCompanies([]));
-    fetchOpportunities().then(setOpps).catch(() => setOpps([]));
+    Promise.all([fetchCompanies(), fetchOpportunities()])
+      .then(([c, o]) => {
+        setCompanies(c);
+        setOpps(o);
+        setError(false);
+      })
+      .catch(() => {
+        setCompanies([]);
+        setOpps([]);
+        setError(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -32,6 +43,8 @@ export default function CompaniesTab({ onOpen }: { onOpen: (oppId: string) => vo
       setBusy(false);
     }
   };
+
+  if (error) return <FetchError onRetry={load} />;
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm">

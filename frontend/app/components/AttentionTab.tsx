@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Attention, AttentionItem, completeAction, fetchAttention } from "@/lib/api";
+import FetchError from "@/app/components/FetchError";
 
 const GROUPS: { kind: string; label: string }[] = [
   { kind: "overdue_followup", label: "Overdue follow-ups" },
@@ -76,15 +77,19 @@ function Row({
 
 export default function AttentionTab({ onOpen }: { onOpen: (oppId: string) => void }) {
   const [data, setData] = useState<Attention | null>(null);
+  const [error, setError] = useState(false);
 
   const load = useCallback(() => {
-    fetchAttention().then(setData).catch(() => setData(null));
+    fetchAttention()
+      .then((d) => { setError(false); setData(d); })
+      .catch(() => { setError(true); setData(null); });
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  if (error) return <FetchError onRetry={load} />;
   if (!data) {
     return <p className="p-4 text-sm text-slate-400">Loading…</p>;
   }
