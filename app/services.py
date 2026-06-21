@@ -29,6 +29,8 @@ from app.models import (
     Company,
     CompanySize,
     Contact,
+    ContentBlock,
+    ContentBlockKind,
     Decision,
     DecisionKind,
     InterviewEvent,
@@ -664,5 +666,40 @@ def delete_interview(session: Session, interview_id: int) -> bool:
     if ev is None:
         return False
     session.delete(ev)
+    session.commit()
+    return True
+
+
+# --- Content Blocks ------------------------------------------------------- #
+
+
+def add_content_block(
+    session: Session,
+    *,
+    kind: ContentBlockKind = ContentBlockKind.bullet,
+    text: str,
+    audience: str = "",
+    tags: list[str] | None = None,
+    provenance: str | None = None,
+) -> ContentBlock:
+    block = ContentBlock(kind=kind, text=text, audience=audience, tags=tags or [], provenance=provenance)
+    session.add(block)
+    session.commit()
+    session.refresh(block)
+    return block
+
+
+def list_content_blocks(session: Session, *, kind: ContentBlockKind | None = None) -> list[ContentBlock]:
+    stmt = select(ContentBlock)
+    if kind is not None:
+        stmt = stmt.where(ContentBlock.kind == kind)
+    return list(session.exec(stmt.order_by(ContentBlock.created_at.desc())).all())
+
+
+def delete_content_block(session: Session, block_id: int) -> bool:
+    block = session.get(ContentBlock, block_id)
+    if block is None:
+        return False
+    session.delete(block)
     session.commit()
     return True

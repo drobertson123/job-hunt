@@ -760,6 +760,28 @@ export async function createWeeklyActions(): Promise<{ created: number }> {
   return res.json();
 }
 
+// ----- content library (spec: 2026-06-21-content-library) -----
+
+export type ContentBlock = {
+  id: number;
+  kind: string;
+  audience: string;
+  text: string;
+  tags: string[];
+  created_at: string;
+};
+
+export async function fetchContentBlocks(): Promise<ContentBlock[]> {
+  const res = await fetch("/api/content-blocks");
+  if (!res.ok) throw new Error(`content blocks failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteContentBlock(id: number): Promise<void> {
+  const res = await fetch(`/api/content-blocks/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`delete content block failed: ${res.status}`);
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {
