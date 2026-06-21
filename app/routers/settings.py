@@ -11,7 +11,7 @@ from sqlmodel import Session
 
 from app.config import get_config
 from app.db import get_session
-from app import settings_service as ss
+from app import google_oauth as go, settings_service as ss
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -20,6 +20,8 @@ class SettingsUpdate(BaseModel):
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
     agent_model: str | None = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
 
 
 class SettingsView(BaseModel):
@@ -28,6 +30,7 @@ class SettingsView(BaseModel):
     agent_model: str
     default_agent_model: str
     deep_analysis_model: str
+    google: dict
 
 
 def _view(session: Session) -> SettingsView:
@@ -38,6 +41,7 @@ def _view(session: Session) -> SettingsView:
         agent_model=ss.resolve_agent_model(session),
         default_agent_model=cfg.default_agent_model,
         deep_analysis_model=cfg.deep_analysis_model,
+        google=go.status(session),
     )
 
 
@@ -56,4 +60,8 @@ def update_settings(
         ss.set_setting(session, ss.OPENAI_API_KEY, body.openai_api_key.strip())
     if body.agent_model is not None:
         ss.set_setting(session, ss.AGENT_MODEL, body.agent_model.strip())
+    if body.google_client_id is not None:
+        ss.set_setting(session, ss.GOOGLE_CLIENT_ID, body.google_client_id.strip())
+    if body.google_client_secret is not None:
+        ss.set_setting(session, ss.GOOGLE_CLIENT_SECRET, body.google_client_secret.strip())
     return _view(session)

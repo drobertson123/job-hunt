@@ -56,12 +56,20 @@ export type Capability = {
   requires_input: boolean;
 };
 
+export type GoogleStatus = {
+  credentials_configured: boolean;
+  connected: boolean;
+  email: string | null;
+  scopes: string;
+};
+
 export type SettingsView = {
   anthropic_key_configured: boolean;
   openai_key_configured: boolean;
   agent_model: string;
   default_agent_model: string;
   deep_analysis_model: string;
+  google: GoogleStatus;
 };
 
 /** POST JSON to an SSE endpoint and dispatch each agent event. */
@@ -186,7 +194,13 @@ export async function getSettings(): Promise<SettingsView> {
 }
 
 export async function updateSettings(
-  body: Partial<{ anthropic_api_key: string; openai_api_key: string; agent_model: string }>,
+  body: Partial<{
+    anthropic_api_key: string;
+    openai_api_key: string;
+    agent_model: string;
+    google_client_id: string;
+    google_client_secret: string;
+  }>,
 ): Promise<SettingsView> {
   const res = await fetch("/api/settings", {
     method: "PUT",
@@ -194,6 +208,12 @@ export async function updateSettings(
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`settings update failed: ${res.status}`);
+  return res.json();
+}
+
+export async function syncGmail(): Promise<{ fetched: number; created: number; skipped: number }> {
+  const res = await fetch("/api/google/gmail/sync", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `gmail sync failed: ${res.status}`);
   return res.json();
 }
 

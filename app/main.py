@@ -28,6 +28,7 @@ from app.routers import (
     companies,
     contacts,
     corpus,
+    google,
     health,
     interviews,
     job_sources,
@@ -58,6 +59,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Opportunity Hunter", version=__version__, lifespan=lifespan)
 
 app.include_router(health.router)
+app.include_router(google.router)
 app.include_router(job_sources.router)
 app.include_router(settings.router)
 app.include_router(chat.router)
