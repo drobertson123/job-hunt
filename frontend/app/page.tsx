@@ -363,7 +363,7 @@ export default function Home() {
 function Bubble({ item }: { item: ChatItem }) {
   if (item.kind === "user") {
     return (
-      <div className="ml-auto max-w-[85%] rounded-lg bg-slate-900 px-3 py-2 text-sm text-white">
+      <div className="ml-auto max-w-[85%] rounded-lg bg-accent px-3 py-2 text-sm text-white">
         {item.text}
       </div>
     );
@@ -449,7 +449,7 @@ function SettingsBadge({
             onChange={(e) => setModel(e.target.value)}
           />
           <button
-            className="w-full rounded bg-slate-900 py-1.5 text-sm font-medium text-white"
+            className="w-full rounded bg-accent py-1.5 text-sm font-medium text-white"
             onClick={save}
           >
             Save

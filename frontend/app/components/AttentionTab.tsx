@@ -112,7 +112,7 @@ export default function AttentionTab({ onOpen }: { onOpen: (oppId: string) => vo
         <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-600">
           Untriaged {data.counts.untriaged_opportunities}
         </span>
-        <span className="rounded bg-slate-900 px-2 py-0.5 text-white">
+        <span className="rounded bg-accent px-2 py-0.5 text-white">
           Total {data.counts.total}
         </span>
       </div>
