@@ -5,26 +5,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#f5f6f7",
-        surface: { DEFAULT: "#ffffff", alt: "#fafbfc", sunk: "#edeef0" },
-        line: { DEFAULT: "#d8dbe0", soft: "#e8eaee", strong: "#b5bac2" },
-        ink: { DEFAULT: "#0f1620", muted: "#5a6270", subtle: "#8a929e" },
-        accent: { DEFAULT: "#0f766e", soft: "#e6f2f0", ink: "#0a4f49" },
-        ok: { DEFAULT: "#2f7d4e", soft: "#e5f3ea" },
-        override: { DEFAULT: "#3b7bb8", soft: "#e6eef7" },
-        warn: { DEFAULT: "#b45816", soft: "#fbecdd" },
-        error: { DEFAULT: "#a6342a", soft: "#f5e1df" },
-        stale: { DEFAULT: "#7a8494", soft: "#e5e7ea" },
+        bg: "#f6f4f0",
+        paper: "#efeae2",                              // kanban columns
+        surface: { DEFAULT: "#ffffff", alt: "#fbfaf8", sunk: "#f1ede7" },
+        line: { DEFAULT: "#ebe7e1", soft: "#f1ede7", strong: "#e6e0d6" },
+        ink: { DEFAULT: "#211e2b", body: "#3b3746", muted: "#6c6678", subtle: "#9a95a3", faint: "#a39c92" },
+        panel: "#211e2b",                              // dark cards
+        accent: { DEFAULT: "#5750d9", ink: "#4840c0", mid: "#7a73e6", light: "#a8a3f0", soft: "#c9c5f2", tint: "#ecebfb" },
+        ok: { DEFAULT: "#3f9a6e", deep: "#2f7a57", soft: "#e8f3ec", mint: "#7ee0b0" },
+        warn: { DEFAULT: "#c98a2e", soft: "#f7efe1" },
+        error: { DEFAULT: "#d35a4a", soft: "#fbecea" },
       },
       fontFamily: {
-        sans: ['Inter', '"Segoe UI"', "-apple-system", "system-ui", "sans-serif"],
+        sans: ['Figtree', '"Segoe UI"', "-apple-system", "system-ui", "sans-serif"],
         mono: ['"JetBrains Mono"', '"SF Mono"', "Menlo", "Consolas", "monospace"],
       },
-      borderRadius: { xs: "2px", sm: "3px", md: "4px", lg: "6px" },
+      borderRadius: { xs: "4px", sm: "7px", md: "11px", lg: "14px", xl: "16px" },
       boxShadow: {
-        panel: "0 1px 0 rgba(15,22,32,0.04)",
-        pop: "0 1px 2px rgba(15,22,32,0.06), 0 4px 12px rgba(15,22,32,0.08)",
-        modal: "0 8px 32px rgba(15,22,32,0.18)",
+        panel: "0 1px 0 rgba(33,30,43,0.04)",
+        card: "0 8px 22px rgba(33,30,43,0.10)",
+        accent: "0 3px 10px rgba(87,80,217,0.25)",
+        pop: "0 6px 16px rgba(33,30,43,0.08)",
+        modal: "0 12px 32px rgba(33,30,43,0.18)",
       },
     },
   },
