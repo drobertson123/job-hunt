@@ -18,6 +18,7 @@ def test_registry_has_the_expected_capabilities():
         # career-pack (slice A+D)
         "enrich-opportunity",
         "company-research",
+        "company-enrich",
         "cv-tailor",
         "interview-prep",
         "fit-analysis",
@@ -37,7 +38,7 @@ def test_registry_skills_match_pack_directories():
 
 
 def test_skill_names_are_plugin_qualified():
-    assert len(caps.SKILL_NAMES) == 9
+    assert len(caps.SKILL_NAMES) == 10
     assert "career-pack:fit-analysis" in caps.SKILL_NAMES
     assert "business-pack:qualify-opportunity" in caps.SKILL_NAMES
 
