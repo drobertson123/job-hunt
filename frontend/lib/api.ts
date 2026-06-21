@@ -674,6 +674,43 @@ export async function deleteInterview(id: number): Promise<void> {
   if (!res.ok) throw new Error(`delete interview failed: ${res.status}`);
 }
 
+// ----- weekly review (spec: 2026-06-21-weekly-process) -----
+
+export type WeeklyOpp = {
+  id: string;
+  title: string;
+  organization: string | null;
+  stage: string;
+  type: string;
+};
+
+export type WeeklyInterview = {
+  id: number;
+  title: string;
+  starts_at: string;
+  opportunity_id: string | null;
+};
+
+export type WeeklyReview = {
+  to_identify: WeeklyOpp[];
+  to_apply: WeeklyOpp[];
+  to_follow_up: WeeklyOpp[];
+  interviews_this_week: WeeklyInterview[];
+  counts: Record<string, number>;
+};
+
+export async function fetchWeeklyReview(): Promise<WeeklyReview> {
+  const res = await fetch("/api/weekly-review");
+  if (!res.ok) throw new Error(`weekly review failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createWeeklyActions(): Promise<{ created: number }> {
+  const res = await fetch("/api/weekly-review/actions", { method: "POST" });
+  if (!res.ok) throw new Error(`create weekly actions failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {
