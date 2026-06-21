@@ -31,6 +31,8 @@ from app.models import (
     Contact,
     Decision,
     DecisionKind,
+    InterviewEvent,
+    InterviewKind,
     JobSource,
     JobSourceKind,
     Opportunity,
@@ -602,3 +604,60 @@ def upsert_job_source(
 
 def list_job_sources(session: Session) -> list[JobSource]:
     return list(session.exec(select(JobSource).order_by(func.lower(JobSource.name))).all())
+
+
+# --- Interviews ----------------------------------------------------------- #
+
+
+def add_interview(
+    session: Session,
+    *,
+    title: str,
+    starts_at: datetime,
+    opportunity_id: str | None = None,
+    kind: InterviewKind = InterviewKind.other,
+    ends_at: datetime | None = None,
+    location: str = "",
+    notes: str = "",
+) -> InterviewEvent:
+    ev = InterviewEvent(
+        title=title,
+        starts_at=starts_at,
+        opportunity_id=opportunity_id,
+        kind=kind,
+        ends_at=ends_at,
+        location=location,
+        notes=notes,
+    )
+    session.add(ev)
+    if opportunity_id:
+        opp = session.get(Opportunity, opportunity_id)
+        if opp:
+            opp.last_activity_at = _utcnow()
+            session.add(opp)
+    session.commit()
+    session.refresh(ev)
+    return ev
+
+
+def list_interviews(
+    session: Session,
+    *,
+    opportunity_id: str | None = None,
+    upcoming: bool = False,
+) -> list[InterviewEvent]:
+    stmt = select(InterviewEvent)
+    if opportunity_id is not None:
+        stmt = stmt.where(InterviewEvent.opportunity_id == opportunity_id)
+    if upcoming:
+        stmt = stmt.where(InterviewEvent.starts_at >= _utcnow())
+    return list(session.exec(stmt.order_by(InterviewEvent.starts_at)).all())
+
+
+def delete_interview(session: Session, interview_id: int) -> bool:
+    ev = session.get(InterviewEvent, interview_id)
+    if ev is None:
+        return False
+    session.delete(ev)
+    session.commit()
+    return True
