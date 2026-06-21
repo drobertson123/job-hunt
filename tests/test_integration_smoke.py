@@ -27,7 +27,7 @@ def test_all_capabilities_reachable_via_api(client):
     names = {c["name"] for c in client.get("/api/capabilities").json()}
     assert "email-analyser" in names
     assert "cover-letter" in names
-    assert len(names) == 13
+    assert len(names) == 15
 
 
 def test_interview_flows_into_weekly_review_and_exports_ics(client):

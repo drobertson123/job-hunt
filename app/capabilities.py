@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from app.models import Opportunity, Profile
+from app.models import Contact, Opportunity, Profile
 
 CAREER_PLUGIN = "career-pack"
 BUSINESS_PLUGIN = "business-pack"
@@ -29,6 +29,7 @@ class Capability:
     include_profile: bool  # inline the synthesized Profile row into the prompt
     plugin: str  # which authored pack ships the skill (qualified name prefix)
     include_preferences: bool = False  # inline job preferences into the prompt
+    include_contacts: bool = False  # inline the user's contacts into the prompt
 
 
 CAPABILITIES = [
@@ -124,6 +125,27 @@ CAPABILITIES = [
         plugin=CAREER_PLUGIN,
     ),
     Capability(
+        name="apply-prep",
+        skill="apply-prep",
+        label="Apply prep",
+        description="Assemble an application kit (docs checklist + ATS field guidance) for an opportunity.",
+        requires_opportunity=True,
+        requires_input=False,
+        include_profile=True,
+        plugin=CAREER_PLUGIN,
+    ),
+    Capability(
+        name="network-scan",
+        skill="network-scan",
+        label="Network scan",
+        description="Scan your contacts' companies for matching openings (warm intros).",
+        requires_opportunity=False,
+        requires_input=False,
+        include_profile=True,
+        plugin=CAREER_PLUGIN,
+        include_contacts=True,
+    ),
+    Capability(
         name="discover-opportunities",
         skill="discover-opportunities",
         label="Discover",
@@ -206,6 +228,16 @@ def profile_block(profile: Profile | None) -> str:
     return "\n".join(lines) or "- (empty profile)"
 
 
+def contacts_block(contacts: list[Contact] | None) -> str:
+    if not contacts:
+        return "- (no contacts on file — import from Google or add manually)"
+    by_org: dict[str, list[str]] = {}
+    for c in contacts:
+        by_org.setdefault(c.organization or "(unknown organization)", []).append(c.name)
+    lines = [f"- {org}: {', '.join(names)}" for org, names in list(by_org.items())[:40]]
+    return "\n".join(lines)
+
+
 def preferences_block(profile: Profile | None) -> str:
     if profile is None:
         return "- (no preferences set — infer from the profile/corpus)"
@@ -225,6 +257,7 @@ def build_prompt(
     opportunity: Opportunity | None = None,
     input_text: str = "",
     profile: Profile | None = None,
+    contacts: list[Contact] | None = None,
 ) -> str:
     parts = [
         f'Use the "{cap.plugin}:{cap.skill}" skill now (via the Skill tool), '
@@ -236,6 +269,8 @@ def build_prompt(
         parts.append("Candidate profile (synthesized):\n" + profile_block(profile))
     if cap.include_preferences:
         parts.append("Job preferences:\n" + preferences_block(profile))
+    if cap.include_contacts:
+        parts.append("Contacts (grouped by organization):\n" + contacts_block(contacts))
     if input_text.strip():
         parts.append("Input:\n" + input_text.strip())
     return "\n\n".join(parts)

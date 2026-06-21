@@ -35,6 +35,7 @@ def test_list_capabilities(client):
         "enrich-opportunity", "company-research", "company-enrich", "cv-tailor",
         "cover-letter", "interview-prep", "fit-analysis", "email-analyser",
         "sms-analyser",
+        "network-scan", "apply-prep",
         "discover-opportunities", "qualify-opportunity",
         "analyze-opportunity", "draft-pursuit",
     }
@@ -139,7 +140,7 @@ def test_list_includes_business_capabilities(client):
         "discover-opportunities", "qualify-opportunity",
         "analyze-opportunity", "draft-pursuit",
     } <= names
-    assert len(names) == 13
+    assert len(names) == 15
 
 
 def test_qualify_requires_opportunity_422(client):

@@ -13,7 +13,7 @@ storage — **no source text was copied**. Adapted concepts include:
 - The **job-preferences** model (dealbreakers / must-haves / nice-to-haves),
   stored on the `Profile` row rather than a `preferences.md` file.
 - The **instruction priority hierarchy** — see `docs/references/priority-hierarchy.md`.
-- (Later slices) network-scan and an ATS-aware application-prep process.
+- **network-scan** (warm-intro company scan) and **apply-prep** (ATS-aware application kit) — see the career-pack skills and `docs/references/ats-patterns.md`.
 
 Original project: https://github.com/proficientlyjobs/proficiently-claude-skills ·
 Proficiently: https://proficiently.com
