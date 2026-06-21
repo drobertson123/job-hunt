@@ -67,6 +67,10 @@ class AppConfig(BaseSettings):
     # Persistent Claude CLI session: keep-alive probe interval (0 disables).
     agent_keep_alive_seconds: int = 120
 
+    # Daily job-search scheduler.
+    daily_search_interval_hours: int = 24
+    daily_search_poll_seconds: int = 3600
+
     # --- "What needs attention" thresholds ---
     attention_stale_active_days: int = 7  # active/in-dialogue with no activity
     attention_untriaged_days: int = 14  # new/qualifying left sitting

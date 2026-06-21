@@ -40,6 +40,7 @@ def init_db() -> None:
     _ensure_column(engine, "opportunities", "source_id", "VARCHAR")
     _ensure_column(engine, "contacts", "company_id", "VARCHAR")
     _ensure_column(engine, "profile", "pinned_skills", "JSON DEFAULT '[]'")
+    _ensure_column(engine, "job_sources", "auto_search", "BOOLEAN DEFAULT 0")
 
 
 def get_session() -> Iterator[Session]:

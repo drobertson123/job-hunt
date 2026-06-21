@@ -416,6 +416,7 @@ class JobSource(SQLModel, table=True):
     kind: JobSourceKind = Field(default=JobSourceKind.other)
     url: str | None = None
     saved_query: str | None = None  # discovery-ready feed; not polled yet
+    auto_search: bool = False  # opt in to the daily scheduler
     last_checked_at: datetime | None = None
     referrer_contact_id: int | None = Field(
         default=None, foreign_key="contacts.id", index=True
