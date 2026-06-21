@@ -47,48 +47,68 @@ export default function CompaniesTab({ onOpen }: { onOpen: (oppId: string) => vo
   if (error) return <FetchError onRetry={load} />;
 
   return (
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm">
-      <button
-        onClick={runBackfill}
-        disabled={busy}
-        className="self-start rounded bg-accent px-3 py-1.5 text-xs text-white disabled:opacity-50"
-      >
-        {busy ? "Backfilling…" : "Backfill from opportunities"}
-      </button>
+    <div className="min-h-0 flex-1 overflow-y-auto p-5">
+      {/* Header */}
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[22px] font-bold tracking-tight text-ink">Companies</h2>
+          <p className="text-[13.5px] text-ink-muted">
+            {companies.length} companies · {opps.length} roles tracked — profiles auto-enriched.
+          </p>
+        </div>
+        <button
+          onClick={runBackfill}
+          disabled={busy}
+          className="flex-none rounded-md bg-accent px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-accent-ink disabled:opacity-50"
+        >
+          {busy ? "Backfilling…" : "Backfill from opportunities"}
+        </button>
+      </div>
 
+      {/* Empty state */}
       {companies.length === 0 ? (
-        <p className="text-slate-400">No companies yet. Run backfill or let the agent add them.</p>
+        <p className="text-ink-subtle">No companies yet. Run backfill or let the agent add them.</p>
       ) : (
-        companies.map((c) => {
-          // Match the backend's case-insensitive, trimmed name dedup so opps
-          // aren't silently dropped when org casing/whitespace differs.
-          const linked = opps.filter(
-            (o) => o.organization?.trim().toLowerCase() === c.name.trim().toLowerCase(),
-          );
-          return (
-            <div key={c.id} className="rounded border border-slate-200 p-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{c.name}</span>
-                {c.industry && <span className="text-xs text-slate-500">{c.industry}</span>}
-                {c.size && c.size !== "unknown" && (
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{c.size}</span>
-                )}
-                {c.ats_vendor && (
-                  <span className="text-xs text-slate-400">ATS: {c.ats_vendor}</span>
-                )}
-              </div>
-              {linked.map((o) => (
-                <div
-                  key={o.id}
-                  onClick={() => onOpen(o.id)}
-                  className="mt-1 cursor-pointer text-xs text-blue-600 hover:underline"
-                >
-                  {o.title}
+        <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
+          {companies.map((c) => {
+            // Match the backend's case-insensitive, trimmed name dedup so opps
+            // aren't silently dropped when org casing/whitespace differs.
+            const linked = opps.filter(
+              (o) => o.organization?.trim().toLowerCase() === c.name.trim().toLowerCase(),
+            );
+            return (
+              <div key={c.id} className="rounded-xl border border-line bg-surface p-4 transition hover:border-line-strong hover:shadow-pop">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-accent-tint text-[13px] font-bold text-accent">
+                    {c.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[14.5px] font-semibold text-ink">{c.name}</div>
+                    <div className="truncate text-[12.5px] text-ink-muted">
+                      {[c.industry, c.size, c.hq_location].filter(Boolean).join(" · ") || "—"}
+                    </div>
+                  </div>
+                  {c.ats_vendor && (
+                    <span className="flex-none rounded-xs bg-surface-sunk px-1.5 py-0.5 font-mono text-[10px] text-ink-subtle">{c.ats_vendor}</span>
+                  )}
                 </div>
-              ))}
-            </div>
-          );
-        })
+                {c.summary && <p className="mt-2.5 line-clamp-2 text-[12.5px] leading-snug text-ink-body">{c.summary}</p>}
+                <div className="mt-3 border-t border-line-soft pt-2.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
+                    {linked.length} role{linked.length === 1 ? "" : "s"}
+                  </div>
+                  <div className="mt-1.5 flex flex-col gap-1">
+                    {linked.slice(0, 4).map((o) => (
+                      <button key={o.id} onClick={() => onOpen(o.id)} className="truncate text-left text-[12.5px] text-accent hover:underline">
+                        {o.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
