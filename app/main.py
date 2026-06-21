@@ -18,12 +18,13 @@ from app import __version__
 from app.config import get_config
 from app.db import init_db
 from app.routers import (
-    applications,
     actions,
+    applications,
     artifacts,
     attention,
     capabilities,
     chat,
+    communications,
     corpus,
     health,
     notes,
@@ -51,6 +52,7 @@ app.include_router(opportunities.router)
 app.include_router(opportunities.board_router)
 app.include_router(actions.router)
 app.include_router(applications.router)
+app.include_router(communications.router)
 app.include_router(artifacts.router)
 app.include_router(attention.router)
 app.include_router(corpus.router)

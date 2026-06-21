@@ -92,6 +92,7 @@ def get_opportunity(opp_id: str, session: Session = Depends(get_session)) -> dic
             .order_by(Decision.created_at.desc())
         ).all(),
         "applications": services.list_applications(session, opportunity_id=opp_id),
+        "communications": services.list_communications(session, opportunity_id=opp_id),
         "briefing": briefing_service.get_briefing(session, opp_id),
     }
 
