@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlmodel import Session
 
-from app import gmail_service, google_oauth as go, settings_service as ss
+from app import gcal_service, gcontacts_service, gmail_service, google_oauth as go, settings_service as ss
 from app.config import get_config
 from app.db import get_session
 from app.models import _utcnow
@@ -49,6 +49,30 @@ def oauth_callback(
     return HTMLResponse(
         "<h3>Google connected ✓</h3><p>You can close this tab and return to Opportunity Hunter.</p>"
     )
+
+
+@router.post("/calendar/sync")
+def calendar_sync(session: Session = Depends(get_session)) -> dict:
+    token = go.get_access_token(session, now=_utcnow())
+    return gcal_service.sync_upcoming(session, access_token=token)
+
+
+@router.post("/contacts/import")
+def contacts_import(session: Session = Depends(get_session)) -> dict:
+    token = go.get_access_token(session, now=_utcnow())
+    return gcontacts_service.import_contacts(session, access_token=token)
+
+
+@router.post("/contacts/{contact_id}/push")
+def contact_push(contact_id: int, session: Session = Depends(get_session)) -> dict:
+    from app.models import Contact
+
+    contact = session.get(Contact, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="contact not found")
+    token = go.get_access_token(session, now=_utcnow())
+    rn = gcontacts_service.push_contact(session, contact, access_token=token)
+    return {"resource_name": rn}
 
 
 @router.post("/gmail/sync")

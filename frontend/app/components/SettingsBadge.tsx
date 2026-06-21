@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SettingsView, syncGmail, updateSettings } from "@/lib/api";
+import { SettingsView, importGoogleContacts, syncGmail, updateSettings } from "@/lib/api";
 
 export default function SettingsBadge({
   settings,
@@ -18,6 +18,8 @@ export default function SettingsBadge({
   const [googleClientSecret, setGoogleClientSecret] = useState("");
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [contactsResult, setContactsResult] = useState<string | null>(null);
+  const [contactsSyncing, setContactsSyncing] = useState(false);
 
   const configured = settings?.anthropic_key_configured;
   const google = settings?.google;
@@ -138,6 +140,29 @@ export default function SettingsBadge({
           )}
           {syncResult && (
             <p className="text-[11px] text-slate-500">{syncResult}</p>
+          )}
+          {google?.connected && (
+            <button
+              className="w-full rounded border border-slate-300 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              onClick={async () => {
+                setContactsSyncing(true);
+                setContactsResult(null);
+                try {
+                  const r = await importGoogleContacts();
+                  setContactsResult(`${r.imported} imported`);
+                } catch (e) {
+                  setContactsResult(String(e));
+                } finally {
+                  setContactsSyncing(false);
+                }
+              }}
+              disabled={contactsSyncing}
+            >
+              {contactsSyncing ? "Importing…" : "Import Google contacts"}
+            </button>
+          )}
+          {contactsResult && (
+            <p className="text-[11px] text-slate-500">{contactsResult}</p>
           )}
 
           <p className="text-[11px] text-slate-400">

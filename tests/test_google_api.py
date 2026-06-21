@@ -59,3 +59,23 @@ def test_oauth_callback_clears_state(client, monkeypatch):
     assert client.get("/api/google/oauth/callback?code=C&state=ST", follow_redirects=False).status_code == 200
     with Session(engine) as s:
         assert (ss.get_setting(s, ss.GOOGLE_OAUTH_STATE) or "") == ""  # consumed
+
+
+def test_calendar_sync_endpoint(client, monkeypatch):
+    import app.routers.google as mod
+    monkeypatch.setattr(mod.go, "get_access_token", lambda session, now: "AT")
+    monkeypatch.setattr(mod.gcal_service, "sync_upcoming", lambda session, **kw: {"pushed": 2, "updated": 0})
+    r = client.post("/api/google/calendar/sync")
+    assert r.status_code == 200 and r.json()["pushed"] == 2
+
+
+def test_contacts_import_endpoint(client, monkeypatch):
+    import app.routers.google as mod
+    monkeypatch.setattr(mod.go, "get_access_token", lambda session, now: "AT")
+    monkeypatch.setattr(mod.gcontacts_service, "import_contacts", lambda session, **kw: {"imported": 3, "skipped": 1})
+    r = client.post("/api/google/contacts/import")
+    assert r.status_code == 200 and r.json()["imported"] == 3
+
+
+def test_contact_push_404(client):
+    assert client.post("/api/google/contacts/999999/push").status_code in (401, 404)

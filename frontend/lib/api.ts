@@ -217,6 +217,18 @@ export async function syncGmail(): Promise<{ fetched: number; created: number; s
   return res.json();
 }
 
+export async function syncGoogleCalendar(): Promise<{ pushed: number; updated: number }> {
+  const res = await fetch("/api/google/calendar/sync", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `calendar sync failed: ${res.status}`);
+  return res.json();
+}
+
+export async function importGoogleContacts(): Promise<{ imported: number; skipped: number }> {
+  const res = await fetch("/api/google/contacts/import", { method: "POST" });
+  if (!res.ok) await throwDetail(res, `contacts import failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- corpus & profile (spec: 2026-06-12-corpus-profile-ui-design.md) -----
 
 export type CorpusDocument = {
