@@ -32,7 +32,7 @@ def test_list_capabilities(client):
     assert r.status_code == 200
     by_name = {c["name"]: c for c in r.json()}
     assert set(by_name) == {
-        "enrich-opportunity", "company-research", "cv-tailor",
+        "enrich-opportunity", "company-research", "company-enrich", "cv-tailor",
         "interview-prep", "fit-analysis",
         "discover-opportunities", "qualify-opportunity",
         "analyze-opportunity", "draft-pursuit",
@@ -138,7 +138,7 @@ def test_list_includes_business_capabilities(client):
         "discover-opportunities", "qualify-opportunity",
         "analyze-opportunity", "draft-pursuit",
     } <= names
-    assert len(names) == 9
+    assert len(names) == 10
 
 
 def test_qualify_requires_opportunity_422(client):
