@@ -116,7 +116,7 @@ export default function ProfileTab() {
           {(profile?.pinned_skills ?? []).map((s) => (
             <span
               key={s}
-              className="flex items-center gap-1 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white"
+              className="flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs text-white"
             >
               {s}
               <button
@@ -151,7 +151,7 @@ export default function ProfileTab() {
             }}
           />
           <button
-            className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             disabled={!skillInput.trim()}
             onClick={() => {
               if (!skillInput.trim()) return;
@@ -174,7 +174,7 @@ export default function ProfileTab() {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-slate-600">Synthesized profile</h3>
           <button
-            className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             onClick={synthesize}
             disabled={synthesizing || busy}
           >
@@ -292,7 +292,7 @@ function AddDocuments({
             onChange={(e) => setText(e.target.value)}
           />
           <button
-            className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             disabled={busy || !title.trim() || !text.trim()}
             onClick={add}
           >
@@ -318,7 +318,7 @@ function ProfileCard({ profile }: { profile: Profile }) {
             {profile.skills.map((s, i) => (
               <span
                 key={`${s}-${i}`}
-                className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
+                className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
               >
                 {s}
               </span>

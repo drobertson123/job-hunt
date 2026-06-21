@@ -134,7 +134,7 @@ export default function BoardTab({ onOpen }: { onOpen: (oppId: string) => void }
             key={f}
             onClick={() => setFilter(f)}
             className={`rounded px-2 py-1 text-xs capitalize ${
-              filter === f ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+              filter === f ? "bg-accent text-white" : "bg-slate-100 text-slate-600"
             }`}
           >
             {f}

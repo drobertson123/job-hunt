@@ -74,7 +74,7 @@ export default function WeeklyTab({ onOpen }: { onOpen: (oppId: string) => void 
           {msg && <span className="text-xs text-green-700">{msg}</span>}
           <button
             onClick={materialize}
-            className="rounded bg-slate-900 px-3 py-1 text-xs text-white"
+            className="rounded bg-accent px-3 py-1 text-xs text-white"
           >
             Create this week&apos;s actions
           </button>

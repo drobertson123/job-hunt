@@ -205,7 +205,7 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
         <input value={cLink} onChange={(e) => setCLink(e.target.value)}
                placeholder="link" className="rounded border px-2 py-1 text-xs" />
         <button onClick={addContact} disabled={!cName.trim()}
-                className="rounded bg-slate-900 px-2 py-1 text-xs text-white disabled:opacity-50">
+                className="rounded bg-accent px-2 py-1 text-xs text-white disabled:opacity-50">
           Add
         </button>
       </div>

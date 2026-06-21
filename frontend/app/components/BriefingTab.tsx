@@ -55,7 +55,7 @@ export default function BriefingTab({ opportunityId }: { opportunityId: string }
       <button
         onClick={synth}
         disabled={busy}
-        className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+        className="self-start rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
       >
         {busy ? "Synthesizing…" : briefing ? "Re-synthesize briefing" : "Synthesize briefing"}
       </button>

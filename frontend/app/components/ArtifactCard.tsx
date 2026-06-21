@@ -181,7 +181,7 @@ export default function ArtifactCard({
                 </button>
                 {artifact.review_status !== "approved" && (
                   <button
-                    className="rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
+                    className="rounded bg-accent px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
                     onClick={approve}
                     disabled={busy || artifact.review_status !== "needs_review"}
                     title={

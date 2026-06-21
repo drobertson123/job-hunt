@@ -83,7 +83,7 @@ export default function SourcesTab() {
         <button
           onClick={submit}
           disabled={!name.trim()}
-          className="rounded bg-slate-900 px-3 py-1 text-xs text-white disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-xs text-white disabled:opacity-50"
         >
           Add
         </button>
