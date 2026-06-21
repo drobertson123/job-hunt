@@ -15,6 +15,8 @@ const config: Config = {
         ok: { DEFAULT: "#3f9a6e", deep: "#2f7a57", soft: "#e8f3ec", mint: "#7ee0b0" },
         warn: { DEFAULT: "#c98a2e", soft: "#f7efe1" },
         error: { DEFAULT: "#d35a4a", soft: "#fbecea" },
+        override: { DEFAULT: "#5750d9", soft: "#ecebfb" },
+        stale: { DEFAULT: "#9a95a3", soft: "#f1ede7" },
       },
       fontFamily: {
         sans: ['Figtree', '"Segoe UI"', "-apple-system", "system-ui", "sans-serif"],
