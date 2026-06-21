@@ -9,6 +9,7 @@ import {
   getProfile,
   pasteDocument,
   synthesizeProfile,
+  updatePinnedSkills,
   uploadDocument,
 } from "@/lib/api";
 
@@ -20,6 +21,7 @@ export default function ProfileTab() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
+  const [skillInput, setSkillInput] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -103,6 +105,66 @@ export default function ProfileTab() {
           onUpload={(f) => mutate(() => uploadDocument(f))}
           onPaste={(title, text) => mutate(() => pasteDocument(title, text))}
         />
+      </section>
+
+      <hr />
+
+      <section>
+        <h3 className="text-sm font-medium text-slate-600">Your skills</h3>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {(profile?.pinned_skills ?? []).map((s) => (
+            <span
+              key={s}
+              className="flex items-center gap-1 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white"
+            >
+              {s}
+              <button
+                aria-label={`Remove ${s}`}
+                className="leading-none hover:text-slate-300"
+                onClick={() =>
+                  updatePinnedSkills((profile?.pinned_skills ?? []).filter((x) => x !== s)).then(
+                    setProfile,
+                  )
+                }
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            className="rounded border px-2 py-1 text-sm"
+            placeholder="Add a skill…"
+            value={skillInput}
+            onChange={(e) => setSkillInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && skillInput.trim()) {
+                updatePinnedSkills([...(profile?.pinned_skills ?? []), skillInput.trim()]).then(
+                  (p) => {
+                    setProfile(p);
+                    setSkillInput("");
+                  },
+                );
+              }
+            }}
+          />
+          <button
+            className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            disabled={!skillInput.trim()}
+            onClick={() => {
+              if (!skillInput.trim()) return;
+              updatePinnedSkills([...(profile?.pinned_skills ?? []), skillInput.trim()]).then(
+                (p) => {
+                  setProfile(p);
+                  setSkillInput("");
+                },
+              );
+            }}
+          >
+            Add
+          </button>
+        </div>
       </section>
 
       <hr />
@@ -249,15 +311,18 @@ function ProfileCard({ profile }: { profile: Profile }) {
         <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{profile.summary}</p>
       )}
       {profile.skills.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {profile.skills.map((s, i) => (
-            <span
-              key={`${s}-${i}`}
-              className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
-            >
-              {s}
-            </span>
-          ))}
+        <div className="mt-2">
+          <h5 className="text-xs font-semibold uppercase text-slate-500">Detected skills</h5>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {profile.skills.map((s, i) => (
+              <span
+                key={`${s}-${i}`}
+                className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
         </div>
       )}
       {profile.experience.length > 0 && (
