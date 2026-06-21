@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { OpportunityFull, PipelineBoard, fetchPipeline, updateStage } from "@/lib/api";
 import FetchError from "@/app/components/FetchError";
+import BoardInsightRail from "@/app/components/BoardInsightRail";
 
 type Filter = "all" | "job" | "business";
 
@@ -123,9 +124,21 @@ export default function BoardTab({ onOpen }: { onOpen: (oppId: string) => void }
   const [board, setBoard] = useState<PipelineBoard | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState(false);
+  const [railWidth, setRailWidth] = useState(340);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
+
+  const startRailResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const onMove = (ev: PointerEvent) => setRailWidth(Math.min(Math.max(window.innerWidth - ev.clientX, 260), 460));
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, []);
 
   const load = useCallback(() => {
     fetchPipeline(filter === "all" ? undefined : filter)
@@ -203,17 +216,25 @@ export default function BoardTab({ onOpen }: { onOpen: (oppId: string) => void }
         <span className="font-mono text-[11.5px] text-ink-muted">Scanning sources…</span>
       </div>
 
-      {total === 0 ? (
-        <p className="p-4 text-sm text-ink-muted">No opportunities in this view.</p>
-      ) : (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4">
-            {board.columns.map((stage) => (
-              <Column key={stage} stage={stage} opps={board.by_stage[stage] ?? []} onOpen={onOpen} />
-            ))}
-          </div>
-        </DndContext>
-      )}
+      <div className="flex min-h-0 flex-1">
+        <div className="min-w-0 flex-1">
+          {total === 0 ? (
+            <p className="p-4 text-sm text-ink-muted">No opportunities in this view.</p>
+          ) : (
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <div className="flex min-h-0 h-full gap-3 overflow-x-auto px-4 pb-4">
+                {board.columns.map((stage) => (
+                  <Column key={stage} stage={stage} opps={board.by_stage[stage] ?? []} onOpen={onOpen} />
+                ))}
+              </div>
+            </DndContext>
+          )}
+        </div>
+        <div onPointerDown={startRailResize} className="w-1.5 flex-none cursor-col-resize border-l border-line hover:bg-accent/40" title="Drag to resize" />
+        <div style={{ width: railWidth }} className="flex-none">
+          <BoardInsightRail onOpen={onOpen} />
+        </div>
+      </div>
     </div>
   );
 }

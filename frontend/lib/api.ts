@@ -782,6 +782,23 @@ export async function deleteContentBlock(id: number): Promise<void> {
   if (!res.ok) throw new Error(`delete content block failed: ${res.status}`);
 }
 
+// ----- agent runs (spec: board-rail) -----
+
+export type RunSummary = {
+  id: string;
+  prompt: string;
+  model: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchRuns(limit = 30): Promise<RunSummary[]> {
+  const res = await fetch(`/api/runs?limit=${limit}`);
+  if (!res.ok) throw new Error(`runs failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {

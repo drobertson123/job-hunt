@@ -3,13 +3,31 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.agent.runner import events_after
 from app.db import get_session
 from app.models import Run
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
+
+
+@router.get("")
+def list_runs(limit: int = 30, session: Session = Depends(get_session)) -> list[dict]:
+    rows = session.exec(
+        select(Run).order_by(Run.created_at.desc()).limit(limit)
+    ).all()
+    return [
+        {
+            "id": r.id,
+            "prompt": (r.prompt or "")[:140],
+            "model": r.model,
+            "status": r.status.value,
+            "created_at": r.created_at.isoformat(),
+            "updated_at": r.updated_at.isoformat(),
+        }
+        for r in rows
+    ]
 
 
 @router.get("/{run_id}")
