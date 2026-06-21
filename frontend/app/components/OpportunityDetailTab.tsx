@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { OpportunityDetail, completeAction, createContact, fetchOpportunityDetail } from "@/lib/api";
+import FetchError from "@/app/components/FetchError";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -32,13 +33,16 @@ function Section({ title, count, children }: {
 
 export default function OpportunityDetailTab({ opportunityId }: { opportunityId: string }) {
   const [detail, setDetail] = useState<OpportunityDetail | null>(null);
+  const [error, setError] = useState(false);
 
   const load = useCallback(() => {
     if (!opportunityId) {
       setDetail(null);
       return;
     }
-    fetchOpportunityDetail(opportunityId).then(setDetail).catch(() => setDetail(null));
+    fetchOpportunityDetail(opportunityId)
+      .then((d) => { setError(false); setDetail(d); })
+      .catch(() => { setError(true); setDetail(null); });
   }, [opportunityId]);
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
       </p>
     );
   }
+  if (error) return <FetchError onRetry={load} />;
   if (!detail) {
     return <p className="p-4 text-sm text-slate-400">Loading…</p>;
   }
