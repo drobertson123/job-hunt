@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { OpportunityDetail, fetchOpportunityDetail } from "@/lib/api";
+import { OpportunityDetail, completeAction, fetchOpportunityDetail } from "@/lib/api";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -177,6 +177,14 @@ export default function OpportunityDetailTab({ opportunityId }: { opportunityId:
               <span className="text-xs text-slate-500">
                 due {new Date(a.due_at).toLocaleDateString()}
               </span>
+            )}
+            {a.status === "open" && (
+              <button
+                onClick={() => completeAction(a.id).then(load)}
+                className="ml-auto rounded bg-slate-200 px-2 py-0.5 text-xs hover:bg-slate-300"
+              >
+                Done
+              </button>
             )}
           </div>
         ))}
