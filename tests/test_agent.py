@@ -107,6 +107,32 @@ async def test_stream_run_records_failure():
 
 
 @pytest.mark.asyncio
+async def test_stream_run_closes_query_fn_generator():
+    """stream_run must aclose() the query_fn generator so the session lock releases."""
+    closed = {"v": False}
+
+    async def gen_query_fn(*, prompt, options):  # noqa: ARG001
+        try:
+            yield AssistantMessage(content=[TextBlock(text="hi")], model="fake-model")
+            yield ResultMessage(
+                subtype="success",
+                duration_ms=1,
+                duration_api_ms=1,
+                is_error=False,
+                num_turns=1,
+                session_id="sess",
+                result="ok",
+                total_cost_usd=0.0,
+            )
+        finally:
+            closed["v"] = True
+
+    events = [e async for e in runner.stream_run("hi", query_fn=gen_query_fn)]
+    assert closed["v"] is True
+    assert any(e["type"] == "result" for e in events)
+
+
+@pytest.mark.asyncio
 async def test_stream_run_default_query_fn_uses_persistent_session(monkeypatch):
     """With no query_fn injected, stream_run routes through the persistent session."""
     import app.agent.runner as runner_mod

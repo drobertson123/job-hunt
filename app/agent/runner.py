@@ -178,30 +178,36 @@ async def stream_run(
 
     try:
         options = build_options(model=model, cwd=cwd, api_key=api_key)
-        async for message in query_fn(prompt=_as_stream(prompt), options=options):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        if block.text:
-                            yield emit(EventType.token, block.text)
-                    elif isinstance(block, ToolUseBlock):
-                        yield emit(
-                            EventType.tool_use,
-                            json.dumps({"name": block.name, "input": block.input}),
-                        )
-                    elif isinstance(block, ToolResultBlock):
-                        content = block.content
-                        text = content if isinstance(content, str) else json.dumps(content)
-                        yield emit(EventType.tool_result, text or "")
-            elif isinstance(message, ResultMessage):
-                payload = {
-                    "result": message.result,
-                    "is_error": message.is_error,
-                    "total_cost_usd": message.total_cost_usd,
-                    "num_turns": message.num_turns,
-                }
-                yield emit(EventType.result, json.dumps(payload))
-                break  # one-shot: stop after the turn completes (streaming-input mode)
+        agen = query_fn(prompt=_as_stream(prompt), options=options)
+        try:
+            async for message in agen:
+                if isinstance(message, AssistantMessage):
+                    for block in message.content:
+                        if isinstance(block, TextBlock):
+                            if block.text:
+                                yield emit(EventType.token, block.text)
+                        elif isinstance(block, ToolUseBlock):
+                            yield emit(
+                                EventType.tool_use,
+                                json.dumps({"name": block.name, "input": block.input}),
+                            )
+                        elif isinstance(block, ToolResultBlock):
+                            content = block.content
+                            text = content if isinstance(content, str) else json.dumps(content)
+                            yield emit(EventType.tool_result, text or "")
+                elif isinstance(message, ResultMessage):
+                    payload = {
+                        "result": message.result,
+                        "is_error": message.is_error,
+                        "total_cost_usd": message.total_cost_usd,
+                        "num_turns": message.num_turns,
+                    }
+                    yield emit(EventType.result, json.dumps(payload))
+                    break  # one-shot: stop after the turn completes (streaming-input mode)
+        finally:
+            aclose = getattr(agen, "aclose", None)
+            if aclose is not None:
+                await aclose()
         # Review gate: auto-check generative artifacts created by this run
         # (best-effort; never fails or hangs the run). to_thread because the
         # embedder is a blocking network call; wait_for bounds it. Applies to

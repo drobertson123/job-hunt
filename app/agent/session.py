@@ -91,8 +91,8 @@ class ClaudeCliSession:
             if self._client is None:
                 return
             try:
-                await self._client.get_server_info()
-            except Exception:  # noqa: BLE001 — dead/timed-out
+                await asyncio.wait_for(self._client.get_server_info(), timeout=10)
+            except Exception:  # noqa: BLE001 — dead/timed-out/hung
                 logger.warning("keep-alive probe failed; dropping session", exc_info=True)
                 await self._reset()
 

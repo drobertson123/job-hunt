@@ -120,3 +120,19 @@ async def test_probe_drops_dead_session():
     # next run reconnects
     _ = [m async for m in s.run(prompt="2", options=_Opts(model="m1"))]
     assert len(created) == 2
+
+
+@pytest.mark.asyncio
+async def test_lock_released_after_early_break_and_close():
+    make, created = _factory(["a", "RESULT", "trailing"])
+    s = ClaudeCliSession(client_factory=make)
+    gen = s.run(prompt="hi", options=_Opts(model="m1"))
+    async for m in gen:
+        if m == "RESULT":
+            break
+    await gen.aclose()
+    assert not s._lock.locked()
+    # a subsequent run still works (no deadlock, connection reused)
+    out = [m async for m in s.run(prompt="2", options=_Opts(model="m1"))]
+    assert out == ["a", "RESULT", "trailing"]
+    assert len(created) == 1
