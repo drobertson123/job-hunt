@@ -536,3 +536,35 @@ export async function backfillCompanies(): Promise<{
   if (!res.ok) throw new Error(`backfill failed: ${res.status}`);
   return res.json();
 }
+
+export async function fetchActions(status?: string, opportunityId?: string): Promise<Action[]> {
+  const p = new URLSearchParams();
+  if (status) p.set("status", status);
+  if (opportunityId) p.set("opportunity_id", opportunityId);
+  const qs = p.toString();
+  const res = await fetch(`/api/actions${qs ? `?${qs}` : ""}`);
+  if (!res.ok) throw new Error(`actions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createAction(body: {
+  title: string;
+  kind?: string;
+  detail?: string;
+  due_at?: string | null;
+  opportunity_id?: string | null;
+}): Promise<Action> {
+  const res = await fetch("/api/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`create action failed: ${res.status}`);
+  return res.json();
+}
+
+export async function completeAction(id: number): Promise<Action> {
+  const res = await fetch(`/api/actions/${id}/complete`, { method: "POST" });
+  if (!res.ok) throw new Error(`complete action failed: ${res.status}`);
+  return res.json();
+}

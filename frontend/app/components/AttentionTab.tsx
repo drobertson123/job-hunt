@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Attention, AttentionItem, fetchAttention } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { Attention, AttentionItem, completeAction, fetchAttention } from "@/lib/api";
 
 const GROUPS: { kind: string; label: string }[] = [
   { kind: "overdue_followup", label: "Overdue follow-ups" },
@@ -35,7 +35,15 @@ function itemDetail(item: AttentionItem): string | null {
   return null;
 }
 
-function Row({ item, onOpen }: { item: AttentionItem; onOpen: (id: string) => void }) {
+function Row({
+  item,
+  onOpen,
+  onComplete,
+}: {
+  item: AttentionItem;
+  onOpen: (id: string) => void;
+  onComplete: () => void;
+}) {
   const clickable = item.opportunity_id != null;
   const detail = itemDetail(item);
   return (
@@ -51,6 +59,17 @@ function Row({ item, onOpen }: { item: AttentionItem; onOpen: (id: string) => vo
         <span className="text-xs text-slate-500">{item.reason}</span>
         {detail && <span className="text-xs text-slate-400">{detail}</span>}
       </div>
+      {item.kind === "overdue_action" && item.action_id != null && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            completeAction(item.action_id as number).then(onComplete);
+          }}
+          className="ml-auto rounded bg-slate-200 px-2 py-0.5 text-xs hover:bg-slate-300"
+        >
+          Done
+        </button>
+      )}
     </div>
   );
 }
@@ -58,9 +77,13 @@ function Row({ item, onOpen }: { item: AttentionItem; onOpen: (id: string) => vo
 export default function AttentionTab({ onOpen }: { onOpen: (oppId: string) => void }) {
   const [data, setData] = useState<Attention | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetchAttention().then(setData).catch(() => setData(null));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (!data) {
     return <p className="p-4 text-sm text-slate-400">Loading…</p>;
@@ -102,6 +125,7 @@ export default function AttentionTab({ onOpen }: { onOpen: (oppId: string) => vo
                 key={item.action_id ?? item.opportunity_id ?? `${kind}-${i}`}
                 item={item}
                 onOpen={onOpen}
+                onComplete={load}
               />
             ))}
           </div>

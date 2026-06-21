@@ -27,6 +27,7 @@ import OpportunityDetailTab from "./components/OpportunityDetailTab";
 import BoardTab from "./components/BoardTab";
 import AttentionTab from "./components/AttentionTab";
 import CompaniesTab from "./components/CompaniesTab";
+import ActionsTab from "./components/ActionsTab";
 
 type ChatItem =
   | { kind: "user"; text: string }
@@ -45,7 +46,7 @@ export default function Home() {
   const [selectedOpp, setSelectedOpp] = useState("");
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [canvasTab, setCanvasTab] = useState<
-    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies"
+    "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -314,6 +315,16 @@ export default function Home() {
             >
               Companies
             </button>
+            <button
+              className={`border-b-2 py-2 ${
+                canvasTab === "actions"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              onClick={() => setCanvasTab("actions")}
+            >
+              Actions
+            </button>
           </div>
           {canvasTab === "profile" ? (
             <ProfileTab />
@@ -339,6 +350,13 @@ export default function Home() {
             />
           ) : canvasTab === "companies" ? (
             <CompaniesTab
+              onOpen={(id) => {
+                setSelectedOpp(id);
+                setCanvasTab("detail");
+              }}
+            />
+          ) : canvasTab === "actions" ? (
+            <ActionsTab
               onOpen={(id) => {
                 setSelectedOpp(id);
                 setCanvasTab("detail");
