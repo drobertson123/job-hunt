@@ -243,7 +243,7 @@ export default function Home() {
             ) : canvasTab === "briefing" ? (
               <BriefingTab opportunityId={selectedOpp} />
             ) : canvasTab === "detail" ? (
-              <OpportunityDetailTab opportunityId={selectedOpp} />
+              <OpportunityDetailTab opportunityId={selectedOpp} onBack={() => setCanvasTab("board")} />
             ) : canvasTab === "board" ? (
               <BoardTab
                 onOpen={(id) => {
