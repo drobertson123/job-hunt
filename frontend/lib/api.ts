@@ -822,6 +822,22 @@ export async function fetchMetrics(): Promise<Metrics> {
   return res.json();
 }
 
+// ----- relationships network (spec: 2026-06-21-relationships) -----
+
+export type RelCluster = {
+  name: string;
+  contacts: { id: number; name: string; role: string | null }[];
+  opportunities: { id: string; title: string; stage: string }[];
+  score: number;
+  warm: boolean;
+};
+
+export async function fetchRelationships(): Promise<{ clusters: RelCluster[]; warm_intro_count: number }> {
+  const res = await fetch("/api/relationships");
+  if (!res.ok) throw new Error(`relationships failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {

@@ -36,6 +36,7 @@ from app.routers import (
     metrics,
     notes,
     opportunities,
+    relationships,
     runs,
     settings,
     weekly,
@@ -82,6 +83,7 @@ app.include_router(interviews.router)
 app.include_router(weekly.router)
 app.include_router(content.router)
 app.include_router(metrics.router)
+app.include_router(relationships.router)
 
 # Serve the built frontend (static export) at / when it exists. Mounted last so
 # /api/* routes take precedence. html=True serves index.html for the SPA root.

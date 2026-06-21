@@ -21,6 +21,7 @@ const ITEMS: Item[] = [
   { key: "contacts", label: "Contacts", icon: I("M8 7.5a3 3 0 100-6 3 3 0 000 6z M2.5 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5 M15 5.2a2.8 2.8 0 010 5.2") },
   { key: "sources", label: "Sources", icon: I("M10.5 16a5.5 5.5 0 100-11 5.5 5.5 0 000 11z M10.5 10.5v.1 M10.5 4v1.5M10.5 15.5V17M4 10.5H2.5M18.5 10.5H17") },
   { key: "automations", label: "Automations", icon: I("M3 6h7M14 6h4M3 15h4M11 15h7") },
+  { key: "relationships", label: "Relationships", icon: I("M5 6.2a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4z M16 6.2a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4z M10.5 17.7a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4z M7 6.5h7M6.2 7.7l3.2 5.8M15.2 7.8l-3.4 5.7") },
   { key: "library", label: "Library", icon: I("M5 3h11v15H5z M5 3a1.5 1.5 0 000 3h11 M9 7h4") },
   { key: "documents", label: "Documents", icon: I("M5 3h6l5 5v10H5z M11 3v5h5") },
   { key: "profile", label: "Profile", icon: I("M10.5 10.5a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z M4 18c0-3.4 2.9-5.5 6.5-5.5S17 14.6 17 18") },
