@@ -62,6 +62,22 @@ def _extract_json(text: str) -> str:
     return s
 
 
+def set_pinned_skills(session: Session, skills: list[str]) -> Profile:
+    cleaned: list[str] = []
+    for s in skills:
+        t = s.strip()
+        if t and t not in cleaned:
+            cleaned.append(t)
+    row = session.exec(select(Profile)).first()
+    if row is None:
+        row = Profile()
+    row.pinned_skills = cleaned
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
 async def synthesize_profile(
     session: Session,
     *,

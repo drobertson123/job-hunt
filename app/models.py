@@ -329,6 +329,7 @@ class Profile(SQLModel, table=True):
     achievements: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     target_titles: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     locations: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    pinned_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     source_doc_count: int = 0
     synthesized_at: datetime = Field(default_factory=_utcnow)
 

@@ -212,6 +212,7 @@ export type Profile = {
   headline: string | null;
   summary: string | null;
   skills: string[];
+  pinned_skills: string[];
   experience: Record<string, unknown>[];
   achievements: string[];
   target_titles: string[];
@@ -282,6 +283,16 @@ export async function getProfile(): Promise<Profile | null> {
   const res = await fetch("/api/corpus/profile");
   if (!res.ok) throw new Error(`profile failed: ${res.status}`);
   return res.json(); // server returns JSON null when no profile exists
+}
+
+export async function updatePinnedSkills(skills: string[]): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pinned_skills: skills }),
+  });
+  if (!res.ok) throw new Error(`update skills failed: ${res.status}`);
+  return res.json();
 }
 
 // ----- artifact grounding & approval (spec: 2026-06-12-artifact-review-export-ui) -----
