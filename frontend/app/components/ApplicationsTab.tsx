@@ -1,21 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Application,
   Opportunity,
   fetchApplications,
   fetchOpportunities,
 } from "@/lib/api";
+import FetchError from "./FetchError";
 
 export default function ApplicationsTab() {
   const [apps, setApps] = useState<Application[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(() => {
+    Promise.all([fetchApplications(), fetchOpportunities()])
+      .then(([a, o]) => {
+        setApps(a);
+        setOpps(o);
+        setError(false);
+      })
+      .catch(() => {
+        setApps([]);
+        setOpps([]);
+        setError(true);
+      });
+  }, []);
 
   useEffect(() => {
-    fetchApplications().then(setApps).catch(() => setApps([]));
-    fetchOpportunities().then(setOpps).catch(() => setOpps([]));
-  }, []);
+    load();
+  }, [load]);
+
+  if (error) return <FetchError onRetry={load} />;
 
   if (apps.length === 0) {
     return (

@@ -206,6 +206,31 @@ def complete_action(session: Session, action_id: int) -> Action | None:
     return action
 
 
+def snooze_action(session: Session, action_id: int) -> Action | None:
+    action = session.get(Action, action_id)
+    if action is None:
+        return None
+    action.status = ActionStatus.snoozed
+    action.updated_at = _utcnow()
+    session.add(action)
+    session.commit()
+    session.refresh(action)
+    return action
+
+
+def reopen_action(session: Session, action_id: int) -> Action | None:
+    action = session.get(Action, action_id)
+    if action is None:
+        return None
+    action.status = ActionStatus.open
+    action.completed_at = None
+    action.updated_at = _utcnow()
+    session.add(action)
+    session.commit()
+    session.refresh(action)
+    return action
+
+
 def list_actions(
     session: Session,
     *,

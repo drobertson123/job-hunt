@@ -9,9 +9,12 @@ import {
   Note,
   Opportunity,
   SettingsView,
+  fetchActions,
   fetchApplications,
   fetchArtifacts,
+  fetchAttention,
   fetchCapabilities,
+  fetchCompanies,
   fetchNotes,
   fetchOpportunities,
   getSettings,
@@ -49,20 +52,29 @@ export default function Home() {
     "workspace" | "profile" | "applications" | "briefing" | "detail" | "board" | "attention" | "companies" | "actions"
   >("workspace");
   const [applications, setApplications] = useState<Application[]>([]);
+  const [attentionCount, setAttentionCount] = useState(0);
+  const [companyCount, setCompanyCount] = useState(0);
+  const [openActionCount, setOpenActionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const refreshCanvas = useCallback(async () => {
     try {
-      const [n, a, o, apps] = await Promise.all([
+      const [n, a, o, apps, att, companies, openActions] = await Promise.all([
         fetchNotes(),
         fetchArtifacts(),
         fetchOpportunities(),
         fetchApplications(),
+        fetchAttention(),
+        fetchCompanies(),
+        fetchActions("open"),
       ]);
       setNotes(n);
       setArtifacts(a);
       setOpps(o);
       setApplications(apps);
+      setAttentionCount(att.counts.total);
+      setCompanyCount(companies.length);
+      setOpenActionCount(openActions.length);
     } catch {
       /* ignore */
     }
@@ -293,7 +305,7 @@ export default function Home() {
               }`}
               onClick={() => setCanvasTab("board")}
             >
-              Board
+              Board ({opps.length})
             </button>
             <button
               className={`border-b-2 py-2 ${
@@ -303,7 +315,7 @@ export default function Home() {
               }`}
               onClick={() => setCanvasTab("attention")}
             >
-              Attention
+              Attention ({attentionCount})
             </button>
             <button
               className={`border-b-2 py-2 ${
@@ -313,7 +325,7 @@ export default function Home() {
               }`}
               onClick={() => setCanvasTab("companies")}
             >
-              Companies
+              Companies ({companyCount})
             </button>
             <button
               className={`border-b-2 py-2 ${
@@ -323,7 +335,7 @@ export default function Home() {
               }`}
               onClick={() => setCanvasTab("actions")}
             >
-              Actions
+              Actions ({openActionCount})
             </button>
           </div>
           {canvasTab === "profile" ? (

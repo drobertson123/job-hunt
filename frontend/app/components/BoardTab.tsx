@@ -11,6 +11,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { OpportunityFull, PipelineBoard, fetchPipeline, updateStage } from "@/lib/api";
+import FetchError from "@/app/components/FetchError";
 
 type Filter = "all" | "job" | "business";
 
@@ -73,14 +74,15 @@ function Column({
 export default function BoardTab({ onOpen }: { onOpen: (oppId: string) => void }) {
   const [board, setBoard] = useState<PipelineBoard | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [error, setError] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
   const load = useCallback(() => {
     fetchPipeline(filter === "all" ? undefined : filter)
-      .then(setBoard)
-      .catch(() => setBoard(null));
+      .then((b) => { setError(false); setBoard(b); })
+      .catch(() => { setError(true); setBoard(null); });
   }, [filter]);
 
   useEffect(() => {
@@ -117,6 +119,7 @@ export default function BoardTab({ onOpen }: { onOpen: (oppId: string) => void }
     updateStage(oppId, newStage, "moved via board").catch(() => load());
   };
 
+  if (error) return <FetchError onRetry={load} />;
   if (!board) {
     return <p className="p-4 text-sm text-slate-400">Loading…</p>;
   }

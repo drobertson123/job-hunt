@@ -8,7 +8,10 @@ import {
   createAction,
   fetchActions,
   fetchOpportunities,
+  reopenAction,
+  snoozeAction,
 } from "@/lib/api";
+import FetchError from "./FetchError";
 
 type Filter = "open" | "done" | "all";
 const KINDS = ["followup", "apply", "research", "prep", "outreach", "decision", "other"];
@@ -21,11 +24,18 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
   const [kind, setKind] = useState("other");
   const [dueAt, setDueAt] = useState("");
   const [oppId, setOppId] = useState("");
+  const [error, setError] = useState(false);
 
   const load = useCallback(() => {
     fetchActions(filter === "all" ? undefined : filter)
-      .then(setActions)
-      .catch(() => setActions([]));
+      .then((a) => {
+        setActions(a);
+        setError(false);
+      })
+      .catch(() => {
+        setActions([]);
+        setError(true);
+      });
   }, [filter]);
 
   useEffect(() => {
@@ -52,6 +62,8 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
 
   const titleFor = (id: string | null) =>
     id ? opps.find((o) => o.id === id)?.title ?? id : null;
+
+  if (error) return <FetchError onRetry={load} />;
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm">
@@ -144,14 +156,30 @@ export default function ActionsTab({ onOpen }: { onOpen: (oppId: string) => void
                 </span>
               )}
               {a.status === "open" ? (
-                <button
-                  onClick={() => completeAction(a.id).then(load)}
-                  className="rounded bg-slate-200 px-2 py-0.5 text-xs hover:bg-slate-300"
-                >
-                  Done
-                </button>
+                <>
+                  <button
+                    onClick={() => completeAction(a.id).then(load)}
+                    className="rounded bg-slate-200 px-2 py-0.5 text-xs hover:bg-slate-300"
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={() => snoozeAction(a.id).then(load)}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+                  >
+                    Snooze
+                  </button>
+                </>
               ) : (
-                <span className="text-xs text-slate-400">{a.status}</span>
+                <>
+                  <span className="text-xs text-slate-400">{a.status}</span>
+                  <button
+                    onClick={() => reopenAction(a.id).then(load)}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+                  >
+                    Reopen
+                  </button>
+                </>
               )}
             </div>
           );
