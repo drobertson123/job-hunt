@@ -22,6 +22,9 @@ from app.models import (
     Artifact,
     ArtifactFormat,
     ArtifactKind,
+    CommChannel,
+    CommDirection,
+    Communication,
     Decision,
     DecisionKind,
     Opportunity,
@@ -329,3 +332,57 @@ def list_applications(
     if opportunity_id:
         q = q.where(Application.opportunity_id == opportunity_id)
     return list(session.exec(q.order_by(Application.created_at.desc())).all())
+
+
+# --- Communications --------------------------------------------------------- #
+
+
+def record_communication(
+    session: Session,
+    *,
+    direction: CommDirection,
+    channel: CommChannel,
+    opportunity_id: str | None = None,
+    contact_id: int | None = None,
+    company_id: str | None = None,
+    subject: str = "",
+    body: str = "",
+    occurred_at: datetime | None = None,
+    thread_key: str | None = None,
+    follow_up_due_at: datetime | None = None,
+    communication_id: int | None = None,
+) -> Communication:
+    row = session.get(Communication, communication_id) if communication_id else None
+    if row is None:
+        row = Communication(direction=direction, channel=channel)
+    # ponytail: overwrite from args (caller sends intended state); occurred_at is
+    # guarded because the column is non-null with a model default.
+    row.direction = direction
+    row.channel = channel
+    row.opportunity_id = opportunity_id
+    row.contact_id = contact_id
+    row.company_id = company_id
+    row.subject = subject
+    row.body = body
+    if occurred_at is not None:
+        row.occurred_at = occurred_at
+    row.thread_key = thread_key
+    row.follow_up_due_at = follow_up_due_at
+    session.add(row)
+    if opportunity_id:
+        opp = session.get(Opportunity, opportunity_id)
+        if opp:
+            opp.last_activity_at = _utcnow()
+            session.add(opp)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def list_communications(
+    session: Session, opportunity_id: str | None = None
+) -> list[Communication]:
+    q = select(Communication)
+    if opportunity_id:
+        q = q.where(Communication.opportunity_id == opportunity_id)
+    return list(session.exec(q.order_by(Communication.occurred_at.desc())).all())
