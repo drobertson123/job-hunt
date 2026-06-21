@@ -801,6 +801,21 @@ export async function fetchRuns(limit = 30): Promise<RunSummary[]> {
   return res.json();
 }
 
+// ----- pipeline metrics (spec: 2026-06-21-metrics) -----
+
+export type Metrics = {
+  kpis: { total_applications: number; this_month: number; response_rate: number; interview_rate: number; active: number };
+  funnel: { label: string; count: number; rate: number | null }[];
+  volume: { week: string; count: number }[];
+  sources: { source: string; count: number }[];
+};
+
+export async function fetchMetrics(): Promise<Metrics> {
+  const res = await fetch("/api/metrics");
+  if (!res.ok) throw new Error(`metrics failed: ${res.status}`);
+  return res.json();
+}
+
 // ----- job sources (spec: jobsource-attribution) -----
 
 export type JobSource = {

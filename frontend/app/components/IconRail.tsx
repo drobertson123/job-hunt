@@ -11,6 +11,7 @@ const I = (d: string, sw = 1.7) => (
 const ITEMS: Item[] = [
   { key: "board", label: "Board", icon: (<svg width="20" height="20" viewBox="0 0 21 21" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="2.5" y="3" width="4.2" height="15" rx="1.4"/><rect x="8.4" y="3" width="4.2" height="10" rx="1.4"/><rect x="14.3" y="3" width="4.2" height="13" rx="1.4"/></svg>) },
   { key: "weekly", label: "This week", icon: I("M3 6h7M14 6h4M3 15h4M11 15h7") },
+  { key: "metrics", label: "Metrics", icon: I("M3 17.5h15.5 M5.5 17.5V11 M10.5 17.5V6.5 M15.5 17.5V9") },
   { key: "attention", label: "Attention", icon: I("M10.5 2.5L2 17h17z M10.5 8v4 M10.5 14.5v.1") },
   { key: "applications", label: "Applications", icon: I("M5 3h6l5 5v10H5z M11 3v5h5 M8 11h5M8 14h5") },
   { key: "actions", label: "Actions", icon: I("M3.5 6l2 2 3.5-4 M3.5 13l2 2 3.5-4 M12 6.5h6 M12 13.5h6") },
