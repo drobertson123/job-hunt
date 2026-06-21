@@ -13,6 +13,8 @@ const ITEMS: Item[] = [
   { key: "weekly", label: "This week", icon: I("M3 6h7M14 6h4M3 15h4M11 15h7") },
   { key: "attention", label: "Attention", icon: I("M10.5 2.5L2 17h17z M10.5 8v4 M10.5 14.5v.1") },
   { key: "applications", label: "Applications", icon: I("M5 3h6l5 5v10H5z M11 3v5h5 M8 11h5M8 14h5") },
+  { key: "actions", label: "Actions", icon: I("M3.5 6l2 2 3.5-4 M3.5 13l2 2 3.5-4 M12 6.5h6 M12 13.5h6") },
+  { key: "briefing", label: "Briefing", icon: I("M3.5 6h14v11H3.5z M3.5 6V4.5h6V6 M7 10h7M7 13h5") },
   { key: "interviews", label: "Interviews", icon: I("M4 4h13v13H4z M4 8h13 M8 2v3 M13 2v3") },
   { key: "companies", label: "Companies", icon: I("M3 3.5h9v14H3z M12 8h5.5v9.5H12 M5.5 7h1M9 7h1M5.5 10h1M9 10h1") },
   { key: "sources", label: "Sources", icon: I("M10.5 16a5.5 5.5 0 100-11 5.5 5.5 0 000 11z M10.5 10.5v.1 M10.5 4v1.5M10.5 15.5V17M4 10.5H2.5M18.5 10.5H17") },
