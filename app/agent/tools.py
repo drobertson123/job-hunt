@@ -249,6 +249,10 @@ async def record_application(args: dict[str, Any]) -> dict[str, Any]:
             "summary": {"type": "string"},
             "notes": {"type": "string"},
             "company_id": {"type": "string", "description": "set to enrich an existing company"},
+            "link_opportunity_id": {
+                "type": "string",
+                "description": "set to link this opportunity to the company",
+            },
         },
         "required": ["name"],
     },
@@ -269,6 +273,7 @@ async def record_company(args: dict[str, Any]) -> dict[str, Any]:
             summary=args.get("summary"),
             notes=args.get("notes"),
             company_id=args.get("company_id"),
+            link_opportunity_id=args.get("link_opportunity_id"),
         )
         return _ok(f"Recorded company {c.id}: {c.name}.")
 

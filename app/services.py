@@ -409,6 +409,7 @@ def upsert_company(
     summary: str | None = None,
     notes: str | None = None,
     company_id: str | None = None,
+    link_opportunity_id: str | None = None,
 ) -> Company:
     row = session.get(Company, company_id) if company_id else None
     if row is None:
@@ -440,6 +441,12 @@ def upsert_company(
     session.add(row)
     session.commit()
     session.refresh(row)
+    if link_opportunity_id:
+        opp = session.get(Opportunity, link_opportunity_id)
+        if opp is not None:
+            opp.company_id = row.id
+            session.add(opp)
+            session.commit()
     return row
 
 
