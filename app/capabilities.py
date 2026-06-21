@@ -28,6 +28,7 @@ class Capability:
     requires_input: bool
     include_profile: bool  # inline the synthesized Profile row into the prompt
     plugin: str  # which authored pack ships the skill (qualified name prefix)
+    include_preferences: bool = False  # inline job preferences into the prompt
 
 
 CAPABILITIES = [
@@ -100,6 +101,7 @@ CAPABILITIES = [
         requires_input=False,
         include_profile=True,
         plugin=CAREER_PLUGIN,
+        include_preferences=True,
     ),
     Capability(
         name="email-analyser",
@@ -204,6 +206,19 @@ def profile_block(profile: Profile | None) -> str:
     return "\n".join(lines) or "- (empty profile)"
 
 
+def preferences_block(profile: Profile | None) -> str:
+    if profile is None:
+        return "- (no preferences set — infer from the profile/corpus)"
+    lines = []
+    if profile.dealbreakers:
+        lines.append("- dealbreakers (if the role matches ANY, rate Skip): " + ", ".join(profile.dealbreakers))
+    if profile.must_haves:
+        lines.append("- must-haves: " + ", ".join(profile.must_haves))
+    if profile.nice_to_haves:
+        lines.append("- nice-to-haves: " + ", ".join(profile.nice_to_haves))
+    return "\n".join(lines) or "- (no preferences set — infer from the profile/corpus)"
+
+
 def build_prompt(
     cap: Capability,
     *,
@@ -219,6 +234,8 @@ def build_prompt(
         parts.append("Opportunity:\n" + opportunity_block(opportunity))
     if cap.include_profile:
         parts.append("Candidate profile (synthesized):\n" + profile_block(profile))
+    if cap.include_preferences:
+        parts.append("Job preferences:\n" + preferences_block(profile))
     if input_text.strip():
         parts.append("Input:\n" + input_text.strip())
     return "\n\n".join(parts)

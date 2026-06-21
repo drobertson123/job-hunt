@@ -245,6 +245,9 @@ export type Profile = {
   summary: string | null;
   skills: string[];
   pinned_skills: string[];
+  dealbreakers: string[];
+  must_haves: string[];
+  nice_to_haves: string[];
   experience: Record<string, unknown>[];
   achievements: string[];
   target_titles: string[];
@@ -324,6 +327,20 @@ export async function updatePinnedSkills(skills: string[]): Promise<Profile> {
     body: JSON.stringify({ pinned_skills: skills }),
   });
   if (!res.ok) throw new Error(`update skills failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updatePreferences(body: {
+  dealbreakers?: string[];
+  must_haves?: string[];
+  nice_to_haves?: string[];
+}): Promise<Profile> {
+  const res = await fetch("/api/corpus/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`update preferences failed: ${res.status}`);
   return res.json();
 }
 
